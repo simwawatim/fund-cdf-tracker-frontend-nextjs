@@ -17,9 +17,16 @@ const LoginComp = () => {
       <div
         className="hidden md:flex md:w-8/12 relative bg-cover bg-center"
         style={{
-          backgroundImage: "url('/logo.webp')",
+          backgroundImage: "url('https://images.squarespace-cdn.com/content/v1/539712a6e4b06a6c9b892bc1/1602606346823-O1E85ROA1WY8GUA1KZEJ/5164447705_8b60b18201_o.jpg')",
         }}
       >
+
+<img
+  src="/cdf-logo-2.png"
+  alt="Overlay"
+  className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-auto rounded-lg shadow-lg"
+/>
+
       </div>
 
       {/* Form Section: 4/12 */}

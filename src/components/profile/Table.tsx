@@ -15,30 +15,30 @@ const TableProfile = () => {
     <div className="flex flex-col lg:flex-row gap-6 p-4">
       {/* Left Profile Card */}
       <div className="w-full lg:w-1/3 space-y-6">
-        <div className="bg-black shadow rounded-2xl p-6 h-full flex flex-col justify-between">
+        <div className="bg-gray-100 shadow rounded-2xl p-6 h-full flex flex-col justify-between">
           <div>
-            <h2 className="text-xl font-semibold mb-4 text-white">Profile</h2>
+            <h2 className="text-xl font-semibold mb-4 text-black">Profile</h2>
             <div className="flex flex-col items-center mb-6">
               <img
                 src="/default-profile.png"
                 alt="Profile"
                 className="w-24 h-24 rounded-full mb-4"
               />
-              <h3 className="text-lg font-medium text-white">Helene Engels</h3>
-              <span className="text-gray-400 text-sm">PRO Account</span>
+              <h3 className="text-lg font-medium text-black">Helene Engels</h3>
+              <span className="text-black text-sm">PRO Account</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Left Info */}
               <div className="space-y-4">
                 <dl>
-                  <dt className="font-semibold text-gray-200">Email</dt>
-                  <dd className="text-gray-400">helene@example.com</dd>
+                  <dt className="font-semibold text-black">Email</dt>
+                  <dd className="text-black">helene@example.com</dd>
                 </dl>
 
                 <dl>
-                  <dt className="font-semibold text-gray-200">Home Address</dt>
-                  <dd className="text-gray-400">
+                  <dt className="font-semibold text-black">Home Address</dt>
+                  <dd className="text-black">
                     2 Miles Drive, NJ 071, New York, USA
                   </dd>
                 </dl>
@@ -47,13 +47,13 @@ const TableProfile = () => {
               {/* Right Info */}
               <div className="space-y-4">
                 <dl>
-                  <dt className="font-semibold text-gray-200">Phone</dt>
-                  <dd className="text-gray-400">+1234 567 890 / +12 345 678</dd>
+                  <dt className="font-semibold text-black">Phone</dt>
+                  <dd className="text-black">+1234 567 890 / +12 345 678</dd>
                 </dl>
 
                 <dl>
-                  <dt className="font-semibold text-gray-200">Favorite Pick-up Point</dt>
-                  <dd className="text-gray-400">
+                  <dt className="font-semibold text-black">Favorite Pick-up Point</dt>
+                  <dd className="text-black">
                     Herald Square, 2, New York, USA
                   </dd>
                 </dl>
@@ -72,13 +72,13 @@ const TableProfile = () => {
 
       {/* Right CDF Stats Card */}
       <div className="w-full lg:flex-1">
-        <div className="bg-black shadow rounded-2xl p-6 h-full">
-          <h2 className="text-xl font-semibold mb-6 text-white">CDF Statistics</h2>
+        <div className="bg-gray-100 shadow rounded-2xl p-6 h-full">
+          <h2 className="text-xl font-semibold mb-6 text-black">CDF Statistics</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 border-t border-b border-gray-700 py-6">
             {stats.map((item, index) => (
               <div key={index} className="flex flex-col">
                 <h3 className="mb-2 text-gray-400">{item.title}</h3>
-                <span className="flex items-center text-2xl font-bold text-white">
+                <span className="flex items-center text-2xl font-bold text-black">
                   {item.value}
                   <span
                     className={`ml-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-medium ${
