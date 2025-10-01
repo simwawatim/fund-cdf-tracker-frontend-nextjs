@@ -1,3 +1,5 @@
+import ProjectsTable from "../projects/Table";
+import ProfileProject from "./ProfileProject";
 
 const TableProfile = () => {
   const stats = [
@@ -8,6 +10,8 @@ const TableProfile = () => {
   ];
 
   return (
+
+    <> 
     <div className="flex flex-col lg:flex-row gap-6 p-4">
       {/* Left Profile Card */}
       <div className="w-full lg:w-1/3 space-y-6">
@@ -88,10 +92,19 @@ const TableProfile = () => {
             ))}
           </div>
         </div>
-
-
+      
       </div>
+
+
     </div>
+
+    <div className="card shadow-sm rounded-3">
+        <div className="card-body">
+          <ProfileProject />
+        </div>
+    </div>
+
+    </>
   );
 };
 
