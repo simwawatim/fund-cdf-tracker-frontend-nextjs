@@ -1,10 +1,10 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
 
-export interface Constituency {
+export interface ConstituencyAPI {
   id: number;
   name: string;
-  county: string;
+  district: string;
   constituency_code: string;
   is_active: boolean;
   created_at: string;
@@ -13,7 +13,7 @@ export interface Constituency {
 
 export interface ConstituencySuccess {
   status: "success";
-  data: Constituency;
+  data: ConstituencyAPI;
 }
 
 export interface ConstituencyError {
@@ -24,25 +24,44 @@ export interface ConstituencyError {
 export type ConstituencyResponse = ConstituencySuccess | ConstituencyError;
 
 class ConstituencyService {
-  async createConstituency(name: string, county: string): Promise<ConstituencyResponse> {
-    if (!name || !county) {
-      return {
-        status: "error",
-        message: "Name and county are required"
-      };
+  async createConstituency(name: string, district: string): Promise<ConstituencyResponse> {
+    if (!name || !district) {
+      return { status: "error", message: "Name and district are required" };
     }
 
     try {
       const response = await axios.post<ConstituencySuccess>(
-        `${BASE_API_URL}api/constituency/v1/`,
-        { name, county }
+        `${BASE_API_URL}api/constituencies/v1/`,
+        { name, district }
       );
       return response.data;
     } catch (err: any) {
-      return {
-        status: "error",
-        message: err.response?.data?.message || "Failed to create constituency"
-      };
+      let errorMessage = "Failed to create constituency";
+      if (err.response?.data?.message) {
+        const msg = err.response.data.message;
+        if (typeof msg === "string") errorMessage = msg;
+        else if (typeof msg === "object") {
+          errorMessage = Object.entries(msg)
+            .map(([field, errors]) => `${field}: ${(errors as string[]).join(", ")}`)
+            .join(" | ");
+        }
+      }
+      return { status: "error", message: errorMessage };
+    }
+  }
+
+  async getConstituencies(): Promise<ConstituencyAPI[]> {
+    try {
+      const response = await axios.get(`${BASE_API_URL}api/constituencies/v1/`);
+      if (response.data?.status === "success" && Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
+      return [];
+    } catch (err) {
+      console.error("Error fetching constituencies:", err);
+      return [];
     }
   }
 }
+
+export default new ConstituencyService();

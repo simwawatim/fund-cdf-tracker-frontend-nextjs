@@ -1,53 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ConstituencyService from "../../api/constituency/constituency";
+import Swal from "sweetalert2";
 
-// -------------------- Constituencies Data --------------------
 interface Constituency {
   name: string;
   province: string;
-  population: number;
-  representative: string;
-  remarks: string;
 }
 
-const initialConstituencies: Constituency[] = [
-  { name: "Lusaka Central", province: "Lusaka", population: 120000, representative: "John Doe", remarks: "Urban area" },
-  { name: "Kitwe West", province: "Copperbelt", population: 90000, representative: "Mary Banda", remarks: "" },
-  { name: "Ndola East", province: "Copperbelt", population: 80000, representative: "Peter Mwansa", remarks: "" },
-  { name: "Livingstone South", province: "Southern", population: 60000, representative: "Grace Phiri", remarks: "" },
-  { name: "Chingola North", province: "Copperbelt", population: 70000, representative: "David Zulu", remarks: "" },
-  { name: "Mufulira Central", province: "Copperbelt", population: 50000, representative: "Linda Mwale", remarks: "" },
-  { name: "Kabwe East", province: "Central", population: 65000, representative: "Thomas Lungu", remarks: "" },
-  { name: "Solwezi West", province: "Northwestern", population: 55000, representative: "Ruth Musonda", remarks: "" },
-  { name: "Lusaka North", province: "Lusaka", population: 110000, representative: "Alice Tembo", remarks: "" },
-  { name: "Ndola South", province: "Copperbelt", population: 75000, representative: "Kennedy Phiri", remarks: "" },
-];
-
-// -------------------- Constituency Table Component --------------------
 const ConstituencyTable = () => {
-  const [constituencies, setConstituencies] = useState(initialConstituencies);
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConstituency, setEditingConstituency] = useState<Constituency | null>(null);
 
-  const itemsPerPage = 3;
+  const [formData, setFormData] = useState<Constituency>({ name: "", province: "" });
+
+  const itemsPerPage = 10;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentConstituencies = constituencies.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(constituencies.length / itemsPerPage);
 
-  const [formData, setFormData] = useState<Constituency>({
-    name: "",
-    province: "",
-    population: 0,
-    representative: "",
-    remarks: "",
-  });
+  useEffect(() => {
+    handleGetConstituencies();
+  }, []);
+
+  const handleGetConstituencies = async () => {
+    try {
+      const response = await ConstituencyService.getConstituencies();
+      const mapped: Constituency[] = response.map(item => ({
+        name: item.name,
+        province: item.district,
+      }));
+
+      setConstituencies(mapped);
+    } catch (error) {
+      console.error("Error fetching constituencies:", error);
+      Swal.fire("Error", "Failed to fetch constituencies", "error");
+    }
+  };
 
   const openAddModal = () => {
     setEditingConstituency(null);
-    setFormData({ name: "", province: "", population: 0, representative: "", remarks: "" });
+    setFormData({ name: "", province: "" });
     setIsModalOpen(true);
   };
 
@@ -57,13 +54,31 @@ const ConstituencyTable = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (editingConstituency) {
+      // Only local update for now
       setConstituencies(constituencies.map(c => (c === editingConstituency ? formData : c)));
     } else {
-      setConstituencies([...constituencies, formData]);
+      try {
+        const response = await ConstituencyService.createConstituency(
+          formData.name,
+          formData.province
+        );
+
+        if (response.status === "success") {
+          Swal.fire("Success!", "Constituency added successfully!", "success");
+          handleGetConstituencies(); // refresh list
+        } else {
+          Swal.fire("Error!", response.message, "error");
+        }
+      } catch (error) {
+        console.error("Error adding constituency:", error);
+        Swal.fire("Error!", "An unexpected error occurred.", "error");
+      }
     }
+
     setIsModalOpen(false);
   };
 
@@ -75,6 +90,7 @@ const ConstituencyTable = () => {
         <button onClick={openAddModal} className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black">
           Add Constituency
         </button>
+        
       </div>
 
       <div className="overflow-x-auto">
@@ -83,9 +99,6 @@ const ConstituencyTable = () => {
             <tr>
               <th className="text-left py-3 px-6">Name</th>
               <th className="text-left py-3 px-6">Province</th>
-              <th className="text-left py-3 px-6">Population</th>
-              <th className="text-left py-3 px-6">Representative</th>
-              <th className="text-left py-3 px-6">Remarks</th>
               <th className="text-left py-3 px-6">Edit</th>
             </tr>
           </thead>
@@ -94,11 +107,10 @@ const ConstituencyTable = () => {
               <tr key={index} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{c.name}</td>
                 <td className="py-3 text-black px-6">{c.province}</td>
-                <td className="py-3 text-black px-6">{c.population.toLocaleString()}</td>
-                <td className="py-3 text-black px-6">{c.representative}</td>
-                <td className="py-3 text-black px-6">{c.remarks}</td>
                 <td className="py-3 text-black px-6">
-                  <button onClick={() => openEditModal(c)} className="text-blue-600 hover:underline">Edit</button>
+                  <button onClick={() => openEditModal(c)} className="text-blue-600 hover:underline">
+                    Edit
+                  </button>
                 </td>
               </tr>
             ))}
@@ -108,19 +120,27 @@ const ConstituencyTable = () => {
 
       {/* Pagination */}
       <div className="flex justify-center mt-4 space-x-2">
-        <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
+        >
           Prev
         </button>
         {[...Array(totalPages)].map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrentPage(i + 1)}
-            className={`px-3 py-1 rounded hover:bg-gray-300 ${currentPage === i + 1 ? "bg-black text-white" : "bg-white text-black"}`}
+            className={`px-3 py-1 rounded hover:bg-gray-300 ${
+              currentPage === i + 1 ? "bg-black text-white" : "bg-white text-black"
+            }`}
           >
             {i + 1}
           </button>
         ))}
-        <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300">
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
+        >
           Next
         </button>
       </div>
@@ -134,15 +154,10 @@ const ConstituencyTable = () => {
               {Object.keys(formData).map(field => (
                 <input
                   key={field}
-                  type={field === "population" ? "number" : "text"}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ")}
+                  type="text"
+                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
                   value={formData[field as keyof Constituency]}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      [field]: field === "population" ? Number(e.target.value) : e.target.value,
-                    })
-                  }
+                  onChange={e => setFormData({ ...formData, [field]: e.target.value })}
                   className="w-full border px-3 py-2 rounded text-black"
                   required
                 />
