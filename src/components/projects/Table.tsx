@@ -284,9 +284,9 @@ const ProjectsTable = () => {
                 <td className="py-3 text-black px-6">{project.location}</td>
                 <td className="py-3 text-black px-6">{project.remarks}</td>
                 <td className="py-3 text-black px-6">
-                  <button onClick={() => openEditModal(project)} className="text-blue-600 hover:underline">
-                    Edit
-                  </button>
+                  <a href="/project-view" className="text-blue-600 hover:underline">
+                    View
+                  </a>
                 </td>
               </tr>
             ))}
