@@ -315,38 +315,94 @@ const ProjectsTable = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-          <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-96 p-6 relative text-black overflow-y-auto max-h-[90vh]">
-            <h2 className="text-2xl font-bold mb-4">{editingProject ? "Edit Project" : "Add Project"}</h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {Object.keys(formData).map((field) => (
-                <input
-                  key={field}
-                  type={field === "allocated_budget" || field === "constituency" || field === "beneficiaries_count" ? "number" : "text"}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ")}
-                  value={formData[field as keyof Project]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      [field]: field === "allocated_budget" || field === "constituency" || field === "beneficiaries_count" ? Number(e.target.value) : e.target.value,
-                    })
-                  }
-                  className="w-full border px-3 py-2 rounded text-black"
-                  required
-                />
-              ))}
-              <div className="flex justify-end space-x-2 mt-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black">
-                  {editingProject ? "Update" : "Add"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+  <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
+    <h2 className="text-2xl font-bold mb-4">{editingProject ? "Edit Project" : "Add Project"}</h2>
+    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+      
+      {/* Project Name */}
+      <div>
+        <input
+          type="text"
+          placeholder="Project Name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          required
+        />
+      </div>
+
+      {/* Description */}
+      <div>
+        <input
+          type="text"
+          placeholder="Description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          required
+        />
+      </div>
+
+      {/* Constituency */}
+      <div>
+        <input
+          type="number"
+          placeholder="Constituency"
+          value={formData.constituency}
+          onChange={(e) => setFormData({ ...formData, constituency: Number(e.target.value) })}
+          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          required
+        />
+      </div>
+
+      {/* Budget */}
+      <div>
+        <input
+          type="number"
+          placeholder="Allocated Budget"
+          value={formData.allocated_budget}
+          onChange={(e) => setFormData({ ...formData, allocated_budget: Number(e.target.value) })}
+          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          required
+        />
+      </div>
+
+      {/* Beneficiaries */}
+      <div>
+        <input
+          type="number"
+          placeholder="Beneficiaries Count"
+          value={formData.beneficiaries_count}
+          onChange={(e) => setFormData({ ...formData, beneficiaries_count: Number(e.target.value) })}
+          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          required
+        />
+      </div>
+
+    </form>
+
+    {/* Buttons Row */}
+    <div className="flex justify-end space-x-2 mt-6">
+      <button
+        type="button"
+        onClick={() => setIsModalOpen(false)}
+        className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
+      >
+        {editingProject ? "Update" : "Add"}
+      </button>
+    </div>
+  </div>
+</div>
+
+    )}
+
     </div>
   );
 };
