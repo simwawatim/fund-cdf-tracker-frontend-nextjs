@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ConstituencyService from "../../api/constituency/constituency";
+import ProgramService, { ProgramAPI } from "../../api/program/program";
+import Swal from "sweetalert2";
 
 // -------------------- Projects Data --------------------
 interface Project {
@@ -19,6 +22,11 @@ interface Project {
   remarks: string;
 }
 
+interface Constituency {
+  id: number;
+  name: string;
+}
+
 const initialProjects: Project[] = [
   {
     name: "Lusaka Water Project",
@@ -35,146 +43,14 @@ const initialProjects: Project[] = [
     location: "Lusaka",
     remarks: "Urgent priority",
   },
-  {
-    name: "Kitwe School Renovation",
-    constituency: 2,
-    project_type: "Education",
-    description: "Renovation of classrooms and labs",
-    allocated_budget: 2000000,
-    status: "Ongoing",
-    start_date: "2025-06-15",
-    end_date: "2025-12-15",
-    beneficiaries_count: 1200,
-    project_manager: "Mary Banda",
-    funding_source: "CDF",
-    location: "Kitwe",
-    remarks: "High priority",
-  },
-  {
-    name: "Ndola Road Expansion",
-    constituency: 3,
-    project_type: "Infrastructure",
-    description: "Expanding main roads for better traffic flow",
-    allocated_budget: 7500000,
-    status: "Planned",
-    start_date: "2025-11-01",
-    end_date: "2026-06-01",
-    beneficiaries_count: 8000,
-    project_manager: "Peter Mwansa",
-    funding_source: "CDF",
-    location: "Ndola",
-    remarks: "",
-  },
-  {
-    name: "Livingstone Health Clinic Upgrade",
-    constituency: 4,
-    project_type: "Health",
-    description: "Upgrade medical equipment and facilities",
-    allocated_budget: 3000000,
-    status: "Ongoing",
-    start_date: "2025-05-01",
-    end_date: "2025-11-01",
-    beneficiaries_count: 3500,
-    project_manager: "Grace Phiri",
-    funding_source: "CDF",
-    location: "Livingstone",
-    remarks: "Critical need",
-  },
-  {
-    name: "Chingola Solar Electrification",
-    constituency: 5,
-    project_type: "Energy",
-    description: "Install solar panels in rural areas",
-    allocated_budget: 4000000,
-    status: "Planned",
-    start_date: "2025-09-01",
-    end_date: "2026-03-01",
-    beneficiaries_count: 4500,
-    project_manager: "David Zulu",
-    funding_source: "CDF",
-    location: "Chingola",
-    remarks: "",
-  },
-  {
-    name: "Mufulira Market Construction",
-    constituency: 6,
-    project_type: "Commerce",
-    description: "Build new market stalls and storage",
-    allocated_budget: 1500000,
-    status: "Completed",
-    start_date: "2025-01-15",
-    end_date: "2025-07-15",
-    beneficiaries_count: 2000,
-    project_manager: "Linda Mwale",
-    funding_source: "CDF",
-    location: "Mufulira",
-    remarks: "Completed on time",
-  },
-  {
-    name: "Kabwe Library Modernization",
-    constituency: 7,
-    project_type: "Education",
-    description: "Upgrade library infrastructure",
-    allocated_budget: 1000000,
-    status: "Planned",
-    start_date: "2025-12-01",
-    end_date: "2026-06-01",
-    beneficiaries_count: 800,
-    project_manager: "Thomas Lungu",
-    funding_source: "CDF",
-    location: "Kabwe",
-    remarks: "",
-  },
-  {
-    name: "Solwezi Bridge Rehabilitation",
-    constituency: 8,
-    project_type: "Infrastructure",
-    description: "Repair and reinforce old bridge",
-    allocated_budget: 6000000,
-    status: "Ongoing",
-    start_date: "2025-07-01",
-    end_date: "2026-01-01",
-    beneficiaries_count: 5000,
-    project_manager: "Ruth Musonda",
-    funding_source: "CDF",
-    location: "Solwezi",
-    remarks: "Safety critical",
-  },
-  {
-    name: "Ndola Youth Sports Center",
-    constituency: 3,
-    project_type: "Recreation",
-    description: "Build sports facilities for youth",
-    allocated_budget: 2500000,
-    status: "Planned",
-    start_date: "2025-10-15",
-    end_date: "2026-04-15",
-    beneficiaries_count: 1000,
-    project_manager: "Kennedy Phiri",
-    funding_source: "CDF",
-    location: "Ndola",
-    remarks: "",
-  },
-  {
-    name: "Lusaka Public Park Revamp",
-    constituency: 1,
-    project_type: "Recreation",
-    description: "Landscape and renovate public park",
-    allocated_budget: 1800000,
-    status: "Planned",
-    start_date: "2025-11-01",
-    end_date: "2026-05-01",
-    beneficiaries_count: 3000,
-    project_manager: "Alice Tembo",
-    funding_source: "CDF",
-    location: "Lusaka",
-    remarks: "Community priority",
-  },
+
 ];
 
 // -------------------- Projects Table Component --------------------
 const ProjectsTable = () => {
   const [projects, setProjects] = useState(initialProjects);
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [programType, setProgramTypes] = useState<ProgramAPI[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -200,6 +76,40 @@ const ProjectsTable = () => {
     location: "",
     remarks: "",
   });
+
+  const handleGetConstituencies = async () =>{
+    try{
+      const response = await ConstituencyService.getConstituencies();
+      setConstituencies(response);
+    }
+
+    catch(error){
+        console.error("Error fetching constituencies:", error);
+        Swal.fire("Error", "Failed to fetch constituencies", "error");
+    }
+  }
+
+  const handleGetPrograms = async () => {
+    try{
+      const response = await ProgramService.getPrograms();
+      if (response.status === "success"){
+        setProgramTypes(response.data as ProgramAPI[]);
+
+      }else{
+        Swal.fire("Error", response.message, "error");
+      }
+    }
+
+    catch(error){
+        console.error("Error fetching programs:", error);
+        Swal.fire("Error", "Failed to fetch programs", "error");
+    }
+
+  }
+  useEffect(() => {
+    handleGetConstituencies();
+    handleGetPrograms();
+  }, []);
 
   const openAddModal = () => {
     setEditingProject(null);
@@ -316,90 +226,175 @@ const ProjectsTable = () => {
       {/* Modal */}
       {isModalOpen && (
       <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-  <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
-    <h2 className="text-2xl font-bold mb-4">{editingProject ? "Edit Project" : "Add Project"}</h2>
-    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-      
-      {/* Project Name */}
-      <div>
-        <input
-          type="text"
-          placeholder="Project Name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          required
-        />
+        <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
+          <h2 className="text-2xl font-bold mb-4">{editingProject ? "Edit Project" : "Add Project"}</h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+            
+            {/* Project Name */}
+            <div>
+                <label>Project Name</label>
+              <input
+                type="text"
+                placeholder="Project Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
+            </div>
+
+            {/* Description */}
+            {/* <div>
+              <label>Description</label>
+              <input
+                type="text"
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
+            </div> */}
+
+            {/* Constituency */}
+            <div>
+              <label>Constituency</label>
+              <select
+                value={formData.constituency}
+                onChange={(e) =>
+                  setFormData({ ...formData, constituency: Number(e.target.value) })
+                }
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+
+              >
+                <option value={0} disabled>
+                  Select Constituency
+                </option>
+                {constituencies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Budget */}
+            <div>
+                <label>Project Type</label>
+              <select
+                value={formData.project_type}
+                onChange={(e) => setFormData({ ...formData, project_type: e.target.value })}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              >
+                <option value="" disabled>
+                  Select Project Type
+                </option>
+                {programType.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Beneficiaries */}
+            <div>
+              <label>Beneficiaries Count</label>
+              <input
+                type="number"
+                placeholder="Beneficiaries Count"
+                value={formData.beneficiaries_count}
+                onChange={(e) => setFormData({ ...formData, beneficiaries_count: Number(e.target.value) })}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
+            </div>
+
+            <div>
+              <label>Allocated Budget</label>
+              <input
+                type="number"
+                placeholder="Allocated Budget"
+                value={formData.beneficiaries_count}
+                onChange={(e) => setFormData({ ...formData, beneficiaries_count: Number(e.target.value) })}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
+            </div>
+
+            <div>
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  placeholder="Start Date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+            </div>
+            <div className="col-span-2">
+              <label>End Date</label>
+              <input
+                type="date"
+                placeholder="End Date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Description Textarea */}
+            <div className="col-span-2">
+              <textarea
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                rows={3}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+                required
+              ></textarea>
+            </div>
+
+            {/* Remarks Textarea */}
+            <div className="col-span-2">
+              <textarea
+                placeholder="Remarks"
+                value={formData.remarks}
+                onChange={(e) =>
+                  setFormData({ ...formData, remarks: e.target.value })
+                }
+                rows={3}
+                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+              ></textarea>
+            </div>
+
+
+          </form>
+
+          {/* Buttons Row */}
+          <div className="flex justify-end space-x-2 mt-6">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
+            >
+              {editingProject ? "Update" : "Add"}
+            </button>
+          </div>
+        </div>
       </div>
-
-      {/* Description */}
-      <div>
-        <input
-          type="text"
-          placeholder="Description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          required
-        />
-      </div>
-
-      {/* Constituency */}
-      <div>
-        <input
-          type="number"
-          placeholder="Constituency"
-          value={formData.constituency}
-          onChange={(e) => setFormData({ ...formData, constituency: Number(e.target.value) })}
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          required
-        />
-      </div>
-
-      {/* Budget */}
-      <div>
-        <input
-          type="number"
-          placeholder="Allocated Budget"
-          value={formData.allocated_budget}
-          onChange={(e) => setFormData({ ...formData, allocated_budget: Number(e.target.value) })}
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          required
-        />
-      </div>
-
-      {/* Beneficiaries */}
-      <div>
-        <input
-          type="number"
-          placeholder="Beneficiaries Count"
-          value={formData.beneficiaries_count}
-          onChange={(e) => setFormData({ ...formData, beneficiaries_count: Number(e.target.value) })}
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          required
-        />
-      </div>
-
-    </form>
-
-    {/* Buttons Row */}
-    <div className="flex justify-end space-x-2 mt-6">
-      <button
-        type="button"
-        onClick={() => setIsModalOpen(false)}
-        className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white"
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
-      >
-        {editingProject ? "Update" : "Add"}
-      </button>
-    </div>
-  </div>
-</div>
 
     )}
 
