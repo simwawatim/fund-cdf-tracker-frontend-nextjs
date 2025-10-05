@@ -53,7 +53,6 @@ const MembersTable = () => {
     { value: "viewer", label: "Viewer" },
   ];
 
-  // Fetch constituencies
   const handleGetConstituencies = async () => {
     try {
       const response = await ConstituencyService.getConstituencies();
@@ -64,7 +63,6 @@ const MembersTable = () => {
     }
   };
 
-  // Fetch members
   const fetchMembers = async () => {
     try {
       const data = await MemberService.getMembers();
