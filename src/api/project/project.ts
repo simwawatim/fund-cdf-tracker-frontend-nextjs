@@ -37,6 +37,21 @@ export interface ProjectError {
 export type ProjectResponse = ProjectSuccess | ProjectError;
 
 class ProjectService {
+
+
+private handleError(err: any, defaultMsg: string): ProjectError {
+    let errorMessage = defaultMsg;
+    if (err.response?.data?.message) {
+      const msg = err.response.data.message;
+      if (typeof msg === "string") errorMessage = msg;
+      else if (typeof msg === "object") {
+        errorMessage = Object.entries(msg)
+          .map(([field, errors]) => `${field}: ${(errors as string[]).join(", ")}`)
+          .join(" | ");
+      }
+    }
+    return { status: "error", message: errorMessage };
+  }
   async createProject(
     name: string,
     description: string,
@@ -96,6 +111,18 @@ class ProjectService {
       return { status: "error", message: errorMessage };
     }
   }
+
+  async getProjects(): Promise<ProjectResponse>{
+    try{
+        const response = await axios.get<ProjectSuccess>(
+            `${BASE_API_URL}api/projects/v1/`
+        )
+        return response.data;
+    }catch(err: any){
+        return this.handleError(err, "Failed to get projects.");
+    }
+  }
+
 }
 
 export default new ProjectService();

@@ -69,6 +69,15 @@ const ProjectsTable = () => {
     }
   }
 
+  const handleGetProjects = async () =>{
+    const response = await ProjectService.getProjects();
+    if (response.status === "success"){
+      setProjects(Array.isArray(response.data) ? response.data as Project[] : [response.data as Project])
+    }else{
+      Swal.fire("Error", response.message, "error");
+    }
+  }
+
   const handleGetPrograms = async () => {
     try{
       const response = await ProgramService.getPrograms();
@@ -86,9 +95,12 @@ const ProjectsTable = () => {
     }
 
   }
+
+
   useEffect(() => {
     handleGetConstituencies();
     handleGetPrograms();
+    handleGetProjects();
   }, []);
 
   const openAddModal = () => {
@@ -172,17 +184,12 @@ const ProjectsTable = () => {
             <tr>
               <th className="text-left py-3 px-6">Name</th>
               <th className="text-left py-3 px-6">Constituency</th>
-              <th className="text-left py-3 px-6">Type</th>
-              <th className="text-left py-3 px-6">Description</th>
+              <th className="text-left py-3 px-6">Program</th>
               <th className="text-left py-3 px-6">Budget</th>
               <th className="text-left py-3 px-6">Status</th>
-              <th className="text-left py-3 px-6">Manager</th>
               <th className="text-left py-3 px-6">Start</th>
               <th className="text-left py-3 px-6">End</th>
               <th className="text-left py-3 px-6">Beneficiaries</th>
-              <th className="text-left py-3 px-6">Funding</th>
-              <th className="text-left py-3 px-6">Location</th>
-              <th className="text-left py-3 px-6">Remarks</th>
               <th className="text-left py-3 px-6">Edit</th>
             </tr>
           </thead>
@@ -190,18 +197,22 @@ const ProjectsTable = () => {
             {currentProjects.map((project, index) => (
               <tr key={index} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{project.name}</td>
-                <td className="py-3 text-black px-6">{project.constituency}</td>
-                <td className="py-3 text-black px-6">{project.program}</td>
-                <td className="py-3 text-black px-6">{project.description}</td>
+                <td className="py-3 text-black px-6">
+                  {
+                    constituencies.find((c) => c.id === project.constituency)?.name || "Unknown"
+                  }
+                </td>
+                <td className="py-3 text-black px-6">
+                  {
+                    programType.find((p) => p.id === project.program)?.name || "Unknown"
+                  }
+                </td>
+
                 <td className="py-3 text-black px-6">{project.allocated_budget.toLocaleString()}</td>
                 <td className="py-3 text-black px-6">{project.status}</td>
-                <td className="py-3 text-black px-6">{project.project_manager}</td>
                 <td className="py-3 text-black px-6">{project.start_date}</td>
                 <td className="py-3 text-black px-6">{project.end_date}</td>
                 <td className="py-3 text-black px-6">{project.beneficiaries_count}</td>
-                <td className="py-3 text-black px-6">{project.funding_source}</td>
-                <td className="py-3 text-black px-6">{project.location}</td>
-                <td className="py-3 text-black px-6">{project.remarks}</td>
                 <td className="py-3 text-black px-6">
                   <a href="/project-view" className="text-blue-600 hover:underline">
                     View
