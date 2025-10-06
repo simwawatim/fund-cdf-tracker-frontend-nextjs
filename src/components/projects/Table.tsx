@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import ConstituencyService from "../../api/constituency/constituency";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
+import ProjectService, {ProjectAPI } from "../../api/project/project"
 import Swal from "sweetalert2";
 
-// -------------------- Projects Data --------------------
 interface Project {
   name: string;
   constituency: number;
-  project_type: number;
+  program: number;
   description: string;
   allocated_budget: number;
   status: string;
@@ -27,28 +27,8 @@ interface Constituency {
   name: string;
 }
 
-const initialProjects: Project[] = [
-  {
-    name: "Lusaka Water Project",
-    constituency: 1,
-    project_type: 1,
-    description: "Water supply improvement",
-    allocated_budget: 5000000,
-    status: "Planned",
-    start_date: "2025-10-01",
-    end_date: "2026-03-01",
-    beneficiaries_count: 5000,
-    project_manager: "John Doe",
-    funding_source: "CDF",
-    location: "Lusaka",
-    remarks: "Urgent priority",
-  },
-
-];
-
-// -------------------- Projects Table Component --------------------
 const ProjectsTable = () => {
-  const [projects, setProjects] = useState(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [constituencies, setConstituencies] = useState<Constituency[]>([]);
   const [programType, setProgramTypes] = useState<ProgramAPI[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +44,7 @@ const ProjectsTable = () => {
   const [formData, setFormData] = useState<Project>({
     name: "",
     constituency: 0,
-    project_type: 0,
+    program: 0,
     description: "",
     allocated_budget: 0,
     status: "",
@@ -116,7 +96,7 @@ const ProjectsTable = () => {
     setFormData({
       name: "",
       constituency: 0,
-      project_type: 0,
+      program: 0,
       description: "",
       allocated_budget: 0,
       status: "",
@@ -137,7 +117,7 @@ const ProjectsTable = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
     e.preventDefault();
     try {
@@ -148,6 +128,18 @@ const ProjectsTable = () => {
       else {
         setProjects([...projects, formData]);
         console.log(formData)
+        const response = await ProjectService.createProject(
+          formData.name,
+          formData.description,
+          formData.constituency,
+          formData.program, 
+          formData.allocated_budget,
+          formData.start_date,
+          formData.end_date,
+          formData.beneficiaries_count,
+          formData.remarks
+        );
+
         Swal.fire("Success", "Project created successfully!", "success");
 
       }
@@ -199,7 +191,7 @@ const ProjectsTable = () => {
               <tr key={index} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{project.name}</td>
                 <td className="py-3 text-black px-6">{project.constituency}</td>
-                <td className="py-3 text-black px-6">{project.project_type}</td>
+                <td className="py-3 text-black px-6">{project.program}</td>
                 <td className="py-3 text-black px-6">{project.description}</td>
                 <td className="py-3 text-black px-6">{project.allocated_budget.toLocaleString()}</td>
                 <td className="py-3 text-black px-6">{project.status}</td>
@@ -293,9 +285,9 @@ const ProjectsTable = () => {
         <div>
           <label>Project Type</label>
           <select
-            value={formData.project_type}
+            value={formData.program}
             onChange={(e) =>
-              setFormData({ ...formData, project_type: Number(e.target.value) })
+              setFormData({ ...formData, program: Number(e.target.value) })
             }
             className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
             required
