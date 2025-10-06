@@ -1,4 +1,5 @@
 "use client";
+import { Eye } from "lucide-react";
 
 interface ProgressUpdate {
   id: number;
@@ -44,14 +45,17 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => (
             <td className="py-2 px-4">{item.progress}%</td>
             <td className="py-2 px-4 text-gray-600">{item.remarks}</td>
             <td className="py-2 px-4 text-gray-500 text-xs">{item.date}</td>
+
+
             <td className="py-2 px-4">
-              <button
+            <a
                 onClick={() => onViewFile(item.fileUrl)}
-                className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 transition"
-              >
-                View
-              </button>
+                className="bg-green-900 text-white p-2 rounded hover:bg-gree -700 transition flex items-center justify-center"
+            >
+                <Eye className="w-4 h-4" />
+            </a>
             </td>
+
           </tr>
         ))}
       </tbody>

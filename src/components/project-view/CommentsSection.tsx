@@ -46,9 +46,9 @@ const CommentsSection = ({ comments }: CommentsSectionProps) => (
       <input
         type="text"
         placeholder="Write a comment..."
-        className="flex-1 text-sm p-2 border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+        className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
       />
-      <button className="bg-blue-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-blue-700 transition">
+      <button className="bg-green-900 text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition">
         Send
       </button>
     </div>
