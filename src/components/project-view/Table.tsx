@@ -1,159 +1,215 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+
+// -------------------- Lazy Components --------------------
+const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
+const ProjectDetails = dynamic(() => import("./ProjectDetails"), { ssr: false });
+const ProgressTable = dynamic(() => import("./ProgressTable"), { ssr: false });
+const CommentsSection = dynamic(() => import("./CommentsSection"), { ssr: false });
+const CreatedByInfo = dynamic(() => import("./CreateBySection"), { ssr: false });
+
+// -------------------- Interfaces --------------------
+interface ProgressUpdate {
+  id: number;
+  user: string;
+  avatar: string;
+  updateType: string;
+  progress: number;
+  remarks: string;
+  date: string;
+  fileUrl: string;
+}
+
+interface Comment {
+  id: number;
+  user: string;
+  avatar: string;
+  time: string;
+  message: string;
+  status: string;
+}
+
 const ProjectViewTable = () => {
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [sectionIndex, setSectionIndex] = useState(0);
+
+  useEffect(() => {
+    if (sectionIndex < 5) {
+      const timer = setTimeout(() => setSectionIndex(sectionIndex + 1), 1000); // 5s delay per section
+      return () => clearTimeout(timer);
+    }
+  }, [sectionIndex]);
+  const progressData: ProgressUpdate[] = [
+    {
+      id: 1,
+      user: "John Doe",
+      avatar: "https://i.pravatar.cc/40?img=1",
+      updateType: "Progress",
+      progress: 20,
+      remarks: "Initial phase completed",
+      date: "2025-10-06",
+      fileUrl: "completion-report.pdf",
+    },
+    {
+      id: 2,
+      user: "Jane Smith",
+      avatar: "https://i.pravatar.cc/40?img=2",
+      updateType: "Progress",
+      progress: 45,
+      remarks: "Foundation works ongoing",
+      date: "2025-10-05",
+      fileUrl: "completion-report.pdf",
+    },
+    {
+      id: 3,
+      user: "Admin",
+      avatar: "https://i.pravatar.cc/40?img=3",
+      updateType: "Completion",
+      progress: 100,
+      remarks: "Project successfully completed",
+      date: "2025-10-04",
+      fileUrl: "completion-report.pdf",
+    },
+  ];
+
+  const commentsData: Comment[] = [
+    {
+      id: 1,
+      user: "Bonnie Green",
+      avatar: "https://i.pravatar.cc/40?img=1",
+      time: "11:46 AM",
+      message: "That's awesome. I think our users will really appreciate the improvements.",
+      status: "Delivered",
+    },
+    {
+      id: 2,
+      user: "John Doe",
+      avatar: "https://i.pravatar.cc/40?img=2",
+      time: "12:02 PM",
+      message: "I’ve updated the API integration, can you check the logs?",
+      status: "Seen",
+    },
+    {
+      id: 3,
+      user: "Jane Smith",
+      avatar: "https://i.pravatar.cc/40?img=3",
+      time: "12:10 PM",
+      message: "Looks good on my end. We can deploy tomorrow morning.",
+      status: "Delivered",
+    },
+  ];
+
   return (
     <>
-      {/* First Row */}
-      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        {/* 8/12 section */}
-            <div className="bg-gray-100 shadow-md rounded-2xl p-6 flex flex-col flex-[8] space-y-6">
-            {/* Header: Project ID/Name and Status */}
-            <div className="flex items-center justify-between">
-                <div>
-                <p className="text-gray-900 font-semibold text-lg">Lusaka Water Project</p>
-                <p className="text-gray-500 text-sm">
-                    Oct 01, 2025 – Mar 01, 2026
-                </p>
-                </div>
+      {/* Top Section */}
+      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full items-start">
+        {/* Left Card */}
+        <div className="bg-gray-100 shadow-md rounded-2xl p-4 flex-1 flex flex-col space-y-4 max-h-[500px] overflow-y-auto">
+          {/* ProjectHeader */}
+          {sectionIndex >= 1 ? (
+            <ProjectHeader
+              name="Lusaka Water Project"
+              period="Oct 01, 2025 – Mar 01, 2026"
+              status="Planned"
+            />
+          ) : (
+            <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
+          )}
 
-                <div>
-                <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${
-                    "planned" === "planned" ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200" : ""
-                }`}>
-                    🕒 Planned
-                </span>
-                </div>
-
-                <button className="flex items-center bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg shadow-sm transition">
-                <svg
-                    className="w-4 h-4 mr-2"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                >
-                    <path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z" />
-                </svg>
-                Update
-                </button>
+          {/* Description */}
+          {sectionIndex >= 2 ? (
+            <div className="border-t pt-2">
+              <p className="text-gray-900 font-semibold text-lg mb-1">Description</p>
+              <p className="text-gray-700 text-sm">
+                Water supply improvement project aimed at improving clean water access across Lusaka.
+              </p>
             </div>
+          ) : (
+            <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
+          )}
 
-            {/* Project Description */}
-            <div className="border-t pt-4">
-                <p className="text-gray-900 font-semibold text-lg mb-2">Description</p>
-                <p className="text-gray-700 text-sm">Water supply improvement</p>
-            </div>
-
-            {/* Project Details Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                <tbody className="divide-y divide-gray-200">
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Project Type</td>
-                    <td className="py-2 px-4 text-gray-900">Infrastructure</td>
-                    </tr>
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Allocated Budget</td>
-                    <td className="py-2 px-4 text-gray-900">ZMW 5,000,000</td>
-                    </tr>
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Beneficiaries</td>
-                    <td className="py-2 px-4 text-gray-900">5,000</td>
-                    </tr>
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Project Manager</td>
-                    <td className="py-2 px-4 text-gray-900">John Doe</td>
-                    </tr>
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Funding Source</td>
-                    <td className="py-2 px-4 text-gray-900">CDF</td>
-                    </tr>
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Location</td>
-                    <td className="py-2 px-4 text-gray-900">Lusaka</td>
-                    </tr>
-                    <tr>
-                    <td className="py-2 px-4 font-medium text-gray-700">Remarks</td>
-                    <td className="py-2 px-4 text-gray-900">Urgent priority</td>
-                    </tr>
-                </tbody>
-                </table>
-            </div>
-            </div>
-
-
-
-        {/* 4/12 section */}
-        <div className="bg-gray-100 shadow-md text-black rounded-2xl p-6 flex flex-col flex-[4] space-y-6">
-            {/* Header */}
-            <div>
-                <p className="text-sm text-gray-600 flex items-center font-medium">
-                <svg
-                    className="fill-current text-gray-700 w-4 h-4 mr-2"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                >
-                    <path d="M4 8V6a6 6 0 1 1 12 0v2h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-8c0-1.1.9-2 2-2h1zm5 6.73V17h2v-2.27a2 2 0 1 0-2 0zM7 6v2h6V6a3 3 0 0 0-6 0z" />
-                </svg>
-                Created By
-                </p>
-            </div>
-
-            {/* Profile */}
-            <div className="flex items-center gap-4">
-                <img
-                className="w-12 h-12 rounded-full border border-gray-300"
-                src="/default-profile.png"
-                alt="Avatar of Jonathan Reinink"
-                />
-                <div>
-                <p className="text-gray-900 font-medium">Jonathan Reinink</p>
-                <p className="text-gray-500 text-sm">Aug 18</p>
-                </div>
-            </div>
-
-            {/* Contact Info */}
-            <div>
-                <p className="text-gray-900 font-semibold text-lg mb-3 border-b pb-1">
-                Contact Info
-                </p>
-                <div className="bg-gray-100 clearspace-y-1">
-                <p className="text-gray-700 text-sm">
-                    <span className="font-medium">Email:</span> example@email.com
-                </p>
-                <p className="text-gray-700 text-sm">
-                    <span className="font-medium">Mobile:</span> +123 456 789
-                </p>
-                </div>
-            </div>
-
-            {/* Constituency Info */}
-            <div>
-                <p className="text-gray-900 font-semibold text-lg mb-3 border-b pb-1">
-                Constituency Info
-                </p>
-                <div className="space-y-1">
-                <p className="text-gray-700 text-sm">
-                    <span className="font-medium">Name:</span> Example Constituency
-                </p>
-                <p className="text-gray-700 text-sm">
-                    <span className="font-medium">Role:</span> Representative
-                </p>
-                </div>
-            </div>
+          {/* ProjectDetails */}
+          {sectionIndex >= 3 ? (
+            <ProjectDetails
+              type="Infrastructure"
+              budget="ZMW 5,000,000"
+              beneficiaries="5,000"
+              manager="John Doe"
+              source="CDF"
+              location="Lusaka"
+              remarks="Urgent priority"
+            />
+          ) : (
+            <div className="h-24 animate-pulse bg-gray-200 rounded-lg mb-4" />
+          )}
         </div>
 
-      </div>
-
-      {/* Second Row */}
-      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        {/* 8/12 section */}
-        <div className="bg-gray-100 shadow text-black rounded-2xl p-6 h-96 flex flex-col justify-between flex-[8]">
-          Down Left (8/12)
-        </div>
-
-        {/* 4/12 section */}
-        <div className="bg-gray-100 shadow text-black rounded-2xl p-6 h-96 flex flex-col justify-between flex-[4]">
-          Down Right (4/12)
+        {/* Right Card - CreatedByInfo */}
+        <div className="flex-1 max-w-xs self-start">
+          {sectionIndex >= 4 ? (
+            <CreatedByInfo
+              creator={{
+                name: "Jonathan Reinink",
+                avatar: "/default-profile.png",
+                date: "Aug 18",
+                email: "example@email.com",
+                mobile: "+123 456 789",
+                constituency: { name: "Example Constituency", role: "Representative" },
+              }}
+            />
+          ) : (
+            <div className="h-64 animate-pulse bg-gray-200 rounded-lg mb-4" />
+          )}
         </div>
       </div>
+
+      {/* Bottom Section */}
+      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
+        <div className="flex-1">
+          {sectionIndex >= 5 ? (
+            <ProgressTable data={progressData} onViewFile={setSelectedFile} />
+          ) : (
+            <div className="h-64 animate-pulse bg-gray-200 rounded-lg mb-4" />
+          )}
+        </div>
+        <div className="flex-1">
+          {sectionIndex >= 5 ? (
+            <CommentsSection comments={commentsData} />
+          ) : (
+            <div className="h-64 animate-pulse bg-gray-200 rounded-lg mb-4" />
+          )}
+        </div>
+      </div>
+
+      {/* File Preview Modal */}
+      {selectedFile && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-3xl p-4 relative">
+            <button
+              onClick={() => setSelectedFile(null)}
+              className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
+            >
+              ✕
+            </button>
+            <h3 className="text-lg text-black mb-3">File Preview</h3>
+            {selectedFile.endsWith(".pdf") ? (
+              <iframe
+                src={selectedFile}
+                className="w-full h-96 rounded-md border"
+                title="PDF Preview"
+              />
+            ) : (
+              <img
+                src={selectedFile}
+                alt="File Preview"
+                className="w-full h-96 object-contain rounded-md"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };

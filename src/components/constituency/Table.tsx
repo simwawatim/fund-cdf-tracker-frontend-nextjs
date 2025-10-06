@@ -206,45 +206,45 @@ const ConstituencyTable = () => {
           <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-96 p-6 relative text-black overflow-y-auto max-h-[90vh]">
             <h2 className="text-2xl font-bold mb-4">{editingConstituency ? "Edit Constituency" : "Add Constituency"}</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-  <input
-    type="text"
-    placeholder="Name"
-    value={formData.name}
-    onChange={e => setFormData({ ...formData, name: e.target.value })}
-    className="mt-2 block w-full rounded-xl border px-4 py-3"
-    required
-  />
+              <input
+                type="text"
+                placeholder="Name"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
 
-  <select
-    value={formData.province}
-    onChange={e => setFormData({ ...formData, province: e.target.value })}
-    className="mt-2 block w-full rounded-xl border px-4 py-3"
-    required
-  >
-    <option value="">Select Province</option>
-    <option value="Lusaka">Lusaka</option>
-    <option value="Copperbelt">Copperbelt</option>
-    <option value="Southern">Southern</option>
-    <option value="Central">Central</option>
-    <option value="Northwestern">Northwestern</option>
-  </select>
+              <select
+                value={formData.province}
+                onChange={e => setFormData({ ...formData, province: e.target.value })}
+                className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              >
+                <option value="">Select Province</option>
+                <option value="Lusaka">Lusaka</option>
+                <option value="Copperbelt">Copperbelt</option>
+                <option value="Southern">Southern</option>
+                <option value="Central">Central</option>
+                <option value="Northwestern">Northwestern</option>
+              </select>
 
-  <div className="flex justify-end space-x-2 mt-3">
-    <button
-      type="button"
-      onClick={() => setIsModalOpen(false)}
-      className="px-4 py-2 rounded bg-red-500 text-white hover:bg-gray-400"
-    >
-      Cancel
-    </button>
-    <button
-      type="submit"
-      className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
-    >
-      {editingConstituency ? "Update" : "Add"}
-    </button>
-  </div>
-</form>
+              <div className="flex justify-end space-x-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded bg-red-500 text-white hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
+                >
+                  {editingConstituency ? "Update" : "Add"}
+                </button>
+              </div>
+            </form>
 
 
           </div>
