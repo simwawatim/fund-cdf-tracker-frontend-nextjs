@@ -143,13 +143,16 @@ const ProjectViewTable = () => {
           {/* ProjectHeader */}
           {sectionIndex >= 1 ? (
             <ProjectHeader
+              id={Number(id)}
               name={String(projectDetails?.name)}
               period={`${projectDetails?.start_date} – ${projectDetails?.end_date}`}
               status={projectDetails?.status || "Unknown"}
+              initialProgress={projectDetails?.completion_percentage || 0}
             />
           ) : (
             <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
           )}
+
 
           {/* Description */}
           {sectionIndex >= 2 ? (

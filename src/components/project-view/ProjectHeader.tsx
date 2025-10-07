@@ -1,179 +1,126 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
+import ProjectService, { ProjectUpdateAPI } from "../../api/project/project";
+import Swal from "sweetalert2";
 
 interface ProjectHeaderProps {
-  name: string | number;
+  id: number;
+  name: string;
   period: string;
   status: string;
   initialProgress?: number;
 }
 
-const ProjectHeader = ({
-  name,
-  period,
-  status,
-  initialProgress = 0,
-}: ProjectHeaderProps) => {
+const ProjectHeader = ({ id, name, period, status, initialProgress = 0 }: ProjectHeaderProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [projectName, setProjectName] = useState(name);
   const [progressPercentage, setProgressPercentage] = useState(initialProgress);
   const [projectStatus, setProjectStatus] = useState(status);
   const [remarks, setRemarks] = useState("");
-  const [documents, setDocuments] = useState<File[]>([]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setDocuments(Array.from(e.target.files));
+  const handleUpdate = async () => {
+    const data: ProjectUpdateAPI = {
+      project: id,
+      update_type: "progress",
+      progress_percentage: progressPercentage,
+      remarks,
+      updated_by: 1, // Replace with logged-in user ID
+    };
+
+    const response = await ProjectService.createProjectUpdate(data);
+
+    if (response.status === "success") {
+      Swal.fire("Success", "Project update created successfully!", "success");
+      setIsModalOpen(false);
+    } else {
+      Swal.fire("Error", response.message || "Failed to update project.", "error");
     }
   };
 
-  const handleUpdate = () => {
-    console.log("Updated Project:", {
-      projectName,
-      progressPercentage,
-      projectStatus,
-      remarks,
-      documents,
-    });
-    setIsModalOpen(false);
-  };
-
   return (
-    <div className="flex items-center justify-between">
+    <div className="bg-white shadow-md rounded-lg p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between">
       <div>
-        <p className="text-gray-900 font-semibold text-lg">{projectName}</p>
-        <p className="text-gray-500 text-sm">{period}</p>
-      </div>
-
-      <div>
-        <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200">
-          🕒 {projectStatus}
+        <h2 className="text-2xl font-semibold text-gray-800">{name}</h2>
+        <p className="text-gray-500">{period}</p>
+        <span
+          className={`inline-block px-3 py-1 rounded-full text-sm mt-2 ${
+            projectStatus === "completed"
+              ? "bg-green-100 text-green-700"
+              : projectStatus === "in-progress"
+              ? "bg-yellow-100 text-yellow-700"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          {projectStatus}
         </span>
       </div>
 
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="flex items-center bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition"
-      >
-        Update
-      </button>
+      <div className="mt-4 md:mt-0">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          Update Project
+        </button>
+      </div>
 
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-          <div className="bg-white rounded-2xl shadow-lg w-11/12 max-w-4xl p-8 relative">
-            {/* Close Button */}
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-xl"
-            >
-              ✕
-            </button>
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-lg">
+            <h3 className="text-xl text-black mb-4">Update Project</h3>
 
-            <h2 className="text-xl font-semibold mb-6 text-gray-800">
-              Update Project
-            </h2>
-
-            {/* Form Grid */}
-            <div className="grid grid-cols-12 gap-6">
-              {/* Project Name */}
-              <div className="col-span-12 md:col-span-6">
-                <label className="text-sm font-medium text-gray-700">
-                  Project Name
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-black">
+                  Completion Progress (%)
                 </label>
                 <input
-                  type="text"
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={progressPercentage}
+                  onChange={(e) => setProgressPercentage(Number(e.target.value))}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 />
               </div>
 
-              {/* Progress % */}
-              <div className="col-span-12 md:col-span-6">
-                <label className="text-sm font-medium text-gray-700">
-                  Progress (%)
-                </label>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-black">Status</label>
                 <select
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                  value={progressPercentage}
-                  onChange={(e) =>
-                    setProgressPercentage(parseInt(e.target.value))
-                  }
-                >
-                  {Array.from({ length: 21 }, (_, i) => i * 5).map((value) => (
-                    <option key={value} value={value}>
-                      {value}%
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Status */}
-              <div className="col-span-12 md:col-span-6">
-                <label className="text-sm font-medium text-gray-700">
-                  Status
-                </label>
-                <select
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                   value={projectStatus}
                   onChange={(e) => setProjectStatus(e.target.value)}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 >
-                  <option value="Planned">Planned</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
                 </select>
               </div>
 
-              {/* Supporting Documents */}
-              <div className="col-span-12 md:col-span-6">
-                <label className="text-sm font-medium text-gray-700">
-                  Supporting Documents
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  className="mt-2 block w-full text-sm text-gray-900"
-                  onChange={handleFileChange}
-                />
-                {documents.length > 0 && (
-                  <ul className="mt-1 text-gray-700 text-sm list-disc list-inside">
-                    {documents.map((file, idx) => (
-                      <li key={idx}>{file.name}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Remarks - Full width */}
-              <div className="col-span-12">
-                <label className="text-sm font-medium text-gray-700">
-                  Remarks
-                </label>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-black">Remarks</label>
                 <textarea
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                  rows={3}
-                  placeholder="Add remarks..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                />
+                  rows={3}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                ></textarea>
               </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex justify-end space-x-4 mt-8">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-6 py-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition"
+                className="px-4 py-2 bg-red-600 text-white rounded-md"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdate}
-                className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                Submit
+                Save Changes
               </button>
             </div>
           </div>
