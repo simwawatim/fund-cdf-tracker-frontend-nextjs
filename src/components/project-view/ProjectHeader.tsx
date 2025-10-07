@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 interface ProjectHeaderProps {
-  name: string;
+  name: string | number;
   period: string;
   status: string;
-  initialProgress?: number; // optional initial progress
+  initialProgress?: number; 
 }
 
 const ProjectHeader = ({

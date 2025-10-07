@@ -5,8 +5,11 @@ import ConstituencyService from "../../api/constituency/constituency";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
 import ProjectService, {ProjectAPI } from "../../api/project/project"
 import Swal from "sweetalert2";
+import Link from "next/link";
+
 
 interface Project {
+  id: number
   name: string;
   constituency: number;
   program: number;
@@ -35,13 +38,14 @@ const ProjectsTable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentProjects = projects.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(projects.length / itemsPerPage);
 
   const [formData, setFormData] = useState<Project>({
+    id: 0,
     name: "",
     constituency: 0,
     program: 0,
@@ -106,6 +110,7 @@ const ProjectsTable = () => {
   const openAddModal = () => {
     setEditingProject(null);
     setFormData({
+      id: 0,
       name: "",
       constituency: 0,
       program: 0,
@@ -141,6 +146,7 @@ const ProjectsTable = () => {
         setProjects([...projects, formData]);
         console.log(formData)
         const response = await ProjectService.createProject(
+          
           formData.name,
           formData.description,
           formData.constituency,
@@ -214,10 +220,14 @@ const ProjectsTable = () => {
                 <td className="py-3 text-black px-6">{project.end_date}</td>
                 <td className="py-3 text-black px-6">{project.beneficiaries_count}</td>
                 <td className="py-3 text-black px-6">
-                  <a href="/project-view" className="text-blue-600 hover:underline">
+                  <Link
+                    href={`/project-view/${project.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
                     View
-                  </a>
+                  </Link>
                 </td>
+
               </tr>
             ))}
           </tbody>

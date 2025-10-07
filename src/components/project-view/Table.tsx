@@ -1,16 +1,16 @@
 "use client";
-
+import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import Swal from "sweetalert2";
+import ProjectService, { ProjectAPI } from "../../api/project/project";
 
-// -------------------- Lazy Components --------------------
 const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
 const ProjectDetails = dynamic(() => import("./ProjectDetails"), { ssr: false });
 const ProgressTable = dynamic(() => import("./ProgressTable"), { ssr: false });
 const CommentsSection = dynamic(() => import("./CommentsSection"), { ssr: false });
 const CreatedByInfo = dynamic(() => import("./CreateBySection"), { ssr: false });
 
-// -------------------- Interfaces --------------------
 interface ProgressUpdate {
   id: number;
   user: string;
@@ -32,15 +32,49 @@ interface Comment {
 }
 
 const ProjectViewTable = () => {
+  const router = useRouter();
+  const { id } = router.query;
+
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [sectionIndex, setSectionIndex] = useState(0);
+  const [projectDetails, setProjectDetails] = useState<ProjectAPI | null>(null);
 
+  // Animate loading of sections
   useEffect(() => {
     if (sectionIndex < 5) {
-      const timer = setTimeout(() => setSectionIndex(sectionIndex + 1), 1000); // 5s delay per section
+      const timer = setTimeout(() => setSectionIndex((prev) => prev + 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [sectionIndex]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchProject = async () => {
+    try {
+      const response = await ProjectService.getProjectById(Number(id));
+
+      if (response.status === "success") {
+
+        if (!Array.isArray(response.data)) {
+          setProjectDetails(response.data);
+        } else {
+          console.warn("Expected a single project, but received an array.");
+        }
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+
+      } catch (err) {
+        console.error("Error fetching project:", err);
+        Swal.fire("Error", "Failed to load project data", "error");
+      }
+    };
+
+
+    fetchProject();
+  }, [id]);
+
   const progressData: ProgressUpdate[] = [
     {
       id: 1,
@@ -100,7 +134,6 @@ const ProjectViewTable = () => {
       status: "Delivered",
     },
   ];
-
   return (
     <>
       {/* Top Section */}
@@ -110,9 +143,9 @@ const ProjectViewTable = () => {
           {/* ProjectHeader */}
           {sectionIndex >= 1 ? (
             <ProjectHeader
-              name="Lusaka Water Project"
-              period="Oct 01, 2025 – Mar 01, 2026"
-              status="Planned"
+              name={String(projectDetails?.name)}
+              period={`${projectDetails?.start_date} – ${projectDetails?.end_date}`}
+              status={projectDetails?.status || "Unknown"}
             />
           ) : (
             <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
@@ -123,7 +156,7 @@ const ProjectViewTable = () => {
             <div className="border-t pt-2">
               <p className="text-gray-900 font-semibold text-lg mb-1">Description</p>
               <p className="text-gray-700 text-sm">
-                Water supply improvement project aimed at improving clean water access across Lusaka.
+                {projectDetails?.description}
               </p>
             </div>
           ) : (
@@ -132,14 +165,15 @@ const ProjectViewTable = () => {
 
           {/* ProjectDetails */}
           {sectionIndex >= 3 ? (
-            <ProjectDetails
-              type="Infrastructure"
+            <
+              ProjectDetails
+              program={String(projectDetails?.program)}
               budget="ZMW 5,000,000"
-              beneficiaries="5,000"
+              beneficiaries={String(projectDetails?.beneficiaries_count || "0")}
               manager="John Doe"
               source="CDF"
               location="Lusaka"
-              remarks="Urgent priority"
+              remarks={String(projectDetails?.remarks)}
             />
           ) : (
             <div className="h-24 animate-pulse bg-gray-200 rounded-lg mb-4" />

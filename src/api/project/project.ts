@@ -26,7 +26,7 @@ export interface ProjectAPI {
 
 export interface ProjectSuccess {
   status: "success";
-  data: ProjectAPI;
+  data: ProjectAPI | ProjectAPI[]; // allow single or list response
 }
 
 export interface ProjectError {
@@ -37,9 +37,7 @@ export interface ProjectError {
 export type ProjectResponse = ProjectSuccess | ProjectError;
 
 class ProjectService {
-
-
-private handleError(err: any, defaultMsg: string): ProjectError {
+  private handleError(err: any, defaultMsg: string): ProjectError {
     let errorMessage = defaultMsg;
     if (err.response?.data?.message) {
       const msg = err.response.data.message;
@@ -52,6 +50,7 @@ private handleError(err: any, defaultMsg: string): ProjectError {
     }
     return { status: "error", message: errorMessage };
   }
+
   async createProject(
     name: string,
     description: string,
@@ -95,34 +94,35 @@ private handleError(err: any, defaultMsg: string): ProjectError {
 
       return response.data;
     } catch (err: any) {
-      let errorMessage = "Failed to create project";
-      if (err.response?.data) {
-        const msg = err.response.data;
-        if (typeof msg === "string") {
-          errorMessage = msg;
-        } else if (msg.message) {
-          errorMessage = msg.message;
-        } else if (typeof msg === "object") {
-          errorMessage = Object.entries(msg)
-            .map(([key, val]) => `${key}: ${(val as string[]).join(", ")}`)
-            .join(" | ");
-        }
-      }
-      return { status: "error", message: errorMessage };
+      return this.handleError(err, "Failed to create project.");
     }
   }
 
-  async getProjects(): Promise<ProjectResponse>{
-    try{
-        const response = await axios.get<ProjectSuccess>(
-            `${BASE_API_URL}api/projects/v1/`
-        )
-        return response.data;
-    }catch(err: any){
-        return this.handleError(err, "Failed to get projects.");
+  async getProjects(): Promise<ProjectResponse> {
+    try {
+      const response = await axios.get<ProjectSuccess>(
+        `${BASE_API_URL}api/projects/v1/`
+      );
+      return response.data;
+    } catch (err: any) {
+      return this.handleError(err, "Failed to get projects.");
     }
   }
 
+  async getProjectById(id: number): Promise<ProjectResponse> {
+    if (!id) {
+      return { status: "error", message: "Project ID is required." };
+    }
+
+    try {
+      const response = await axios.get<ProjectSuccess>(
+        `${BASE_API_URL}api/projects/v1/${id}/`
+      );
+      return response.data;
+    } catch (err: any) {
+      return this.handleError(err, `Failed to get project with ID ${id}.`);
+    }
+  }
 }
 
 export default new ProjectService();

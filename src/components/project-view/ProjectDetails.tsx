@@ -1,18 +1,18 @@
 "use client";
 
 interface ProjectDetailsProps {
-  type: string;
   budget: string;
-  beneficiaries: string;
+  program: string | number;
+  beneficiaries: string | number;
   manager: string;
   source: string;
   location: string;
-  remarks: string;
+  remarks: string | number;
 }
 
 const ProjectDetails = ({
-  type,
   budget,
+  program,
   beneficiaries,
   manager,
   source,
@@ -24,7 +24,7 @@ const ProjectDetails = ({
       <tbody className="divide-y divide-gray-200">
         <tr>
           <td className="py-2 px-4 font-medium text-gray-700">Project Type</td>
-          <td className="py-2 px-4 text-gray-900">{type}</td>
+          <td className="py-2 px-4 text-gray-900">{program}</td>
         </tr>
         <tr>
           <td className="py-2 px-4 font-medium text-gray-700">Allocated Budget</td>
