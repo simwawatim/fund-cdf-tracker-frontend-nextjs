@@ -1,4 +1,5 @@
 "use client";
+
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
@@ -15,8 +16,8 @@ interface ProgressUpdate {
   id: number;
   user: string;
   avatar: string;
-  updateType: string;
-  progress: number;
+  update_type: string;
+  progress_percentage: string | number;
   remarks: string;
   date: string;
   fileUrl: string;
@@ -38,8 +39,8 @@ const ProjectViewTable = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [sectionIndex, setSectionIndex] = useState(0);
   const [projectDetails, setProjectDetails] = useState<ProjectAPI | null>(null);
+  const [progressData, setProgressData] = useState<ProgressUpdate[]>([]);
 
-  // Animate loading of sections
   useEffect(() => {
     if (sectionIndex < 5) {
       const timer = setTimeout(() => setSectionIndex((prev) => prev + 1), 1000);
@@ -51,62 +52,48 @@ const ProjectViewTable = () => {
     if (!id) return;
 
     const fetchProject = async () => {
-    try {
-      const response = await ProjectService.getProjectById(Number(id));
+      try {
+        const response = await ProjectService.getProjectById(Number(id));
 
-      if (response.status === "success") {
-
-        if (!Array.isArray(response.data)) {
-          setProjectDetails(response.data);
+        if (response.status === "success") {
+          if (!Array.isArray(response.data)) {
+            setProjectDetails(response.data);
+          } else {
+            console.warn("Expected a single project, but received an array.");
+          }
         } else {
-          console.warn("Expected a single project, but received an array.");
+          Swal.fire("Error", response.message, "error");
         }
-      } else {
-        Swal.fire("Error", response.message, "error");
-      }
-
       } catch (err) {
         console.error("Error fetching project:", err);
         Swal.fire("Error", "Failed to load project data", "error");
       }
     };
 
-
     fetchProject();
   }, [id]);
 
-  const progressData: ProgressUpdate[] = [
-    {
-      id: 1,
-      user: "John Doe",
-      avatar: "https://i.pravatar.cc/40?img=1",
-      updateType: "Progress",
-      progress: 20,
-      remarks: "Initial phase completed",
-      date: "2025-10-06",
-      fileUrl: "completion-report.pdf",
-    },
-    {
-      id: 2,
-      user: "Jane Smith",
-      avatar: "https://i.pravatar.cc/40?img=2",
-      updateType: "Progress",
-      progress: 45,
-      remarks: "Foundation works ongoing",
-      date: "2025-10-05",
-      fileUrl: "completion-report.pdf",
-    },
-    {
-      id: 3,
-      user: "Admin",
-      avatar: "https://i.pravatar.cc/40?img=3",
-      updateType: "Completion",
-      progress: 100,
-      remarks: "Project successfully completed",
-      date: "2025-10-04",
-      fileUrl: "completion-report.pdf",
-    },
-  ];
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchProjectUpdateDetails = async () => {
+      try {
+        const response = await ProjectService.getProjectUpdateBasedOnProjectId(Number(id));
+        if (response.status === "success") {
+          if (Array.isArray(response.data)) {
+            setProgressData(response.data);
+          } else {
+            Swal.fire("Error", "Expected an array of updates, but got a single object.", "error");
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching project update:", err);
+        Swal.fire("Error", "Failed to load project update data", "error");
+      }
+    };
+
+    fetchProjectUpdateDetails();
+  }, [id]);
 
   const commentsData: Comment[] = [
     {
@@ -134,6 +121,7 @@ const ProjectViewTable = () => {
       status: "Delivered",
     },
   ];
+
   return (
     <>
       {/* Top Section */}
@@ -153,14 +141,11 @@ const ProjectViewTable = () => {
             <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
           )}
 
-
           {/* Description */}
           {sectionIndex >= 2 ? (
             <div className="border-t pt-2">
               <p className="text-gray-900 font-semibold text-lg mb-1">Description</p>
-              <p className="text-gray-700 text-sm">
-                {projectDetails?.description}
-              </p>
+              <p className="text-gray-700 text-sm">{projectDetails?.description}</p>
             </div>
           ) : (
             <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
@@ -168,8 +153,7 @@ const ProjectViewTable = () => {
 
           {/* ProjectDetails */}
           {sectionIndex >= 3 ? (
-            <
-              ProjectDetails
+            <ProjectDetails
               program={String(projectDetails?.program)}
               budget="ZMW 5,000,000"
               beneficiaries={String(projectDetails?.beneficiaries_count || "0")}

@@ -24,6 +24,18 @@ export interface ProjectAPI {
   is_active: boolean;
 }
 
+export interface ProjectUpdateProgress {
+  id: number;
+  project: number;
+  update_type: string;
+  date: string;
+  progress_percentage: number
+  remarks: string;
+  updated_by: number;
+  is_active: boolean;
+}
+
+
 export interface ProjectSuccess {
   status: "success";
   data: ProjectAPI | ProjectAPI[];
@@ -140,6 +152,23 @@ class ProjectService {
       };
     }
   }
+
+
+  async getProjectUpdateBasedOnProjectId(projectId: number): Promise<ProjectUpdateResponse> {
+    if (!projectId) return { status: "error", message: "Project ID is required." };
+    try {
+      const response = await axios.get<ProjectUpdateResponse>(
+        `${BASE_API_URL}api/project-updates/v1/${projectId}/`
+      );
+      return response.data;
+    } catch (err: any) {
+      return {
+        status: "error",
+        message: `Failed to get project updates for project ID ${projectId}: ${err.message || err}`,
+      };
+    }
+  }
+
 }
 
 export default new ProjectService();
