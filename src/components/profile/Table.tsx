@@ -1,10 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProfileProject from "./ProfileProject";
+import ProfileService, { ProfileAPI } from "../../api/profile/profile";
+import Swal from "sweetalert2";
 
 const TableProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [profileInfo, setProfileInfo] = useState<ProfileAPI | null>(null);
+  const [formData, setFormData] = useState<Partial<ProfileAPI>>({});
+
+  const userId = 9;
+  const getMessage = (message: string | Record<string, string[]> | undefined) => {
+    if (!message) return "Something went wrong";
+    if (typeof message === "string") return message;
+    return Object.values(message).flat().join("\n");
+  };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const result = await ProfileService.getProfileById(userId);
+      if (result.status === "success") {
+        setProfileInfo(result.data);
+        setFormData(result.data);
+      } else {
+        Swal.fire({
+          title: "Error!",
+          text: getMessage(result.message),
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const result = await ProfileService.updateProfile(userId, formData);
+    if (result.status === "success") {
+      setProfileInfo(result.data);
+      setIsModalOpen(false);
+
+      Swal.fire({
+        title: "Profile Updated!",
+        text: "Your profile has been successfully updated.",
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } else {
+      Swal.fire({
+        title: "Error!",
+        text: getMessage(result.message),
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
+    }
+  };
 
   const stats = [
     { title: "Total Projects", value: 48, change: "+12%", positive: true },
@@ -32,49 +91,33 @@ const TableProfile = () => {
                   className="w-28 h-28 rounded-full border-4 border-green-700 shadow-md mb-4"
                 />
                 <h3 className="text-lg font-semibold text-black">
-                  Helene Engels
+                  {profileInfo ? `${profileInfo.first_name} ${profileInfo.last_name}` : "Loading..."}
                 </h3>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  PRO Account
+                  {profileInfo?.role || "User"}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-medium text-black">
-                      Email
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      helene@example.com
-                    </p>
+                    <h4 className="font-medium text-black">Email</h4>
+                    <p className="text-sm text-gray-700">{profileInfo?.email || "N/A"}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-black">
-                      Home Address
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      2 Miles Drive, NJ 071, New York, USA
-                    </p>
+                    <h4 className="font-medium text-black">Constituency</h4>
+                    <p className="text-sm text-gray-700">{profileInfo?.constituency || "N/A"}</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-medium text-black">
-                      Phone
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      +1234 567 890 / +12 345 678
-                    </p>
+                    <h4 className="font-medium text-black">Phone</h4>
+                    <p className="text-sm text-gray-700">{profileInfo?.phone || "N/A"}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-black">
-                      Favorite Pick-up Point
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      Herald Square, 2, New York, USA
-                    </p>
+                    <h4 className="font-medium text-black">Role</h4>
+                    <p className="text-sm text-gray-700">{profileInfo?.role || "N/A"}</p>
                   </div>
                 </div>
               </div>
@@ -88,7 +131,6 @@ const TableProfile = () => {
             >
               Edit Profile
             </button>
-
           </div>
         </div>
 
@@ -104,13 +146,9 @@ const TableProfile = () => {
                   key={index}
                   className="flex flex-col p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
                 >
-                  <h3 className="text-sm font-medium text-black mb-2">
-                    {item.title}
-                  </h3>
+                  <h3 className="text-sm font-medium text-black mb-2">{item.title}</h3>
                   <div className="flex items-center">
-                    <span className="text-2xl font-bold text-black">
-                      {item.value}
-                    </span>
+                    <span className="text-2xl font-bold text-black">{item.value}</span>
                     <span
                       className={`ml-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
                         item.positive
@@ -129,9 +167,8 @@ const TableProfile = () => {
       </div>
 
       {/* Projects */}
-   
-        <ProfileProject />
-   
+      <ProfileProject />
+
       {/* Modal */}
       {isModalOpen && (
         <div
@@ -142,48 +179,47 @@ const TableProfile = () => {
             className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-semibold mb-4 text-black">
-              Edit Profile
-            </h3>
-            <form className="space-y-4">
+            <h3 className="text-xl font-semibold mb-4 text-black">Edit Profile</h3>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Full Name
-                </label>
+                <label className="block text-sm font-medium text-black mb-1">First Name</label>
                 <input
                   type="text"
-                  defaultValue="Helene Engels"
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  name="first_name"
+                  value={formData.first_name || ""}
+                  onChange={handleChange}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-black mb-1">Last Name</label>
+                <input
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name || ""}
+                  onChange={handleChange}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">Email</label>
                 <input
                   type="email"
-                  defaultValue="helene@example.com"
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  name="email"
+                  value={formData.email || ""}
+                  onChange={handleChange}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Phone
-                </label>
+                <label className="block text-sm font-medium text-black mb-1">Phone</label>
                 <input
                   type="text"
-                  defaultValue="+1234 567 890"
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  name="phone"
+                  value={formData.phone || ""}
+                  onChange={handleChange}
+                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Address
-                </label>
-                <textarea
-                  defaultValue="2 Miles Drive, NJ 071, New York, USA"
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                ></textarea>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <button
