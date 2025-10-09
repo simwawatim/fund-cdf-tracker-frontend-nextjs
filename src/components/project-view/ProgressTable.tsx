@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Eye } from "lucide-react";
 
 interface ProgressUpdate {
@@ -19,6 +20,13 @@ interface ProgressTableProps {
 }
 
 const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 5; // number of rows per page
+
+  const totalPages = Math.ceil(data.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const currentData = data.slice(startIndex, startIndex + rowsPerPage);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "Invalid Date";
@@ -27,6 +35,12 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
       month: "short",
       day: "numeric",
     });
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   return (
@@ -50,14 +64,14 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
           </thead>
 
           <tbody>
-            {data.map((item, index) => (
+            {currentData.map((item, index) => (
               <tr
                 key={item.id || index}
                 className="border-b hover:bg-gray-50 transition duration-150"
               >
-                <td className="py-2 px-4 text-gray-900">{index + 1}</td>
-
-                {/* User */}
+                <td className="py-2 px-4 text-gray-900">
+                  {startIndex + index + 1}
+                </td>
                 <td className="py-2 px-4 flex items-center gap-2">
                   <img
                     src={item.avatar || "https://i.pravatar.cc/40?img=3"}
@@ -69,14 +83,11 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
                   </span>
                 </td>
 
-                {/* Update Type */}
                 <td className="py-2 px-4">
                   <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-semibold">
                     {item.update_type}
                   </span>
                 </td>
-
-                {/* Progress */}
                 <td className="py-2 px-4 text-gray-900 font-medium">
                   <div className="flex items-center gap-2">
                     <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -89,21 +100,20 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
                         style={{ width: `${item.progress_percentage}%` }}
                       ></div>
                     </div>
-                    <span className="text-xs">{item.progress_percentage}%</span>
+                    <span className="text-xs">
+                      {item.progress_percentage}%
+                    </span>
                   </div>
                 </td>
 
-                {/* Remarks */}
                 <td className="py-2 px-4 text-gray-600 text-sm truncate max-w-xs">
                   {item.remarks}
                 </td>
 
-                {/* Date */}
                 <td className="py-2 px-4 text-gray-500 text-xs">
                   {formatDate(item.date)}
                 </td>
 
-                {/* File View */}
                 <td className="py-2 px-4">
                   <button
                     onClick={() =>
@@ -130,6 +140,39 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 text-sm text-gray-700">
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-md border ${
+              currentPage === 1
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-white hover:bg-gray-100"
+            }`}
+          >
+            Previous
+          </button>
+
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-md border ${
+              currentPage === totalPages
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-white hover:bg-gray-100"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };
