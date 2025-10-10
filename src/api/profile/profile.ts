@@ -50,17 +50,36 @@ class ProfileService {
 
   async updateProfile(id: number, data: Partial<ProfileAPI>): Promise<MemberResponse> {
     try {
-      const response = await axios.put(`${BASE_API_URL}/api/users/v1/${id}/`, data);
+      const response = await axios.patch(`${BASE_API_URL}/api/users/v1/${id}/`, data);
       if (response.data?.status === "success") {
         return { status: "success", data: response.data.data as ProfileAPI };
       }
       return { status: "error", message: response.data?.message || "Failed to update profile" };
     } catch (err: any) {
       console.error("Error updating profile:", err);
-      return {
-        status: "error",
-        message: err.response?.data?.message || "Network or server error",
-      };
+
+      let message = "Something went wrong while updating your profile.";
+
+      if (err.response) {
+        const { status, data } = err.response;
+        if (status === 400) {
+          message = "Please check your details — some fields may be invalid.";
+        } else if (status === 401) {
+          message = "You are not authorized. Please log in again.";
+        } else if (status === 404) {
+          message = "Profile not found.";
+        } else if (status >= 500) {
+          message = "The server encountered an issue. Please try again later.";
+        }
+
+        if (data?.message) {
+          message += `\nDetails: ${JSON.stringify(data.message)}`;
+        }
+      } else if (err.request) {
+        message = "No response from the server. Please check your network connection.";
+      }
+
+      return { status: "error", message };
     }
   }
 }

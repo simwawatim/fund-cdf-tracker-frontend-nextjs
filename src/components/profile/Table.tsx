@@ -3,14 +3,21 @@
 import { useEffect, useState } from "react";
 import ProfileProject from "./ProfileProject";
 import ProfileService, { ProfileAPI } from "../../api/profile/profile";
+import ConstituencyService from "../../api/constituency/constituency";
 import Swal from "sweetalert2";
+
+interface Constituency {
+  id: number;
+  name: string;
+}
 
 const TableProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileInfo, setProfileInfo] = useState<ProfileAPI | null>(null);
   const [formData, setFormData] = useState<Partial<ProfileAPI>>({});
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const userId = 12;
 
-  const userId = 9;
   const getMessage = (message: string | Record<string, string[]> | undefined) => {
     if (!message) return "Something went wrong";
     if (typeof message === "string") return message;
@@ -32,15 +39,38 @@ const TableProfile = () => {
         });
       }
     };
+
+    const handleGetConstituencies = async () => {
+      try {
+        const response = await ConstituencyService.getConstituencies();
+        setConstituencies(response);
+      } catch (error) {
+        console.error("Error fetching constituencies:", error);
+        Swal.fire("Error", "Failed to fetch constituencies", "error");
+      }
+    };
+
     fetchProfile();
+    handleGetConstituencies();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    // Update nested "user" fields properly
+    if (["first_name", "last_name", "email"].includes(name)) {
+      setFormData({
+        ...formData,
+        user: { ...formData.user, [name]: value },
+      });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("📤 Sending data:", JSON.stringify(formData, null, 2));
 
     const result = await ProfileService.updateProfile(userId, formData);
     if (result.status === "success") {
@@ -57,8 +87,11 @@ const TableProfile = () => {
       });
     } else {
       Swal.fire({
-        title: "Error!",
-        text: getMessage(result.message),
+        title: "Update Failed",
+        text:
+          typeof result.message === "string"
+            ? result.message
+            : getMessage(result.message),
         icon: "error",
         confirmButtonColor: "#d33",
       });
@@ -78,11 +111,8 @@ const TableProfile = () => {
         {/* Profile Card */}
         <div className="w-full lg:w-1/3">
           <div className="bg-gray-200 shadow-lg rounded-2xl p-6 border flex flex-col justify-between h-full">
-            {/* Profile Info */}
             <div>
-              <h2 className="text-2xl font-semibold mb-5 text-black">
-                Profile Overview
-              </h2>
+              <h2 className="text-2xl font-semibold mb-5 text-black">Profile Overview</h2>
 
               <div className="flex flex-col items-center mb-6">
                 <img
@@ -91,7 +121,7 @@ const TableProfile = () => {
                   className="w-28 h-28 rounded-full border-4 border-green-700 shadow-md mb-4"
                 />
                 <h3 className="text-lg font-semibold text-black">
-                  {profileInfo ? `${profileInfo.first_name} ${profileInfo.last_name}` : "Loading..."}
+                  {profileInfo ? `${profileInfo.user.first_name} ${profileInfo.user.last_name}` : "Loading..."}
                 </h3>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {profileInfo?.role || "User"}
@@ -102,11 +132,13 @@ const TableProfile = () => {
                 <div className="space-y-3">
                   <div>
                     <h4 className="font-medium text-black">Email</h4>
-                    <p className="text-sm text-gray-700">{profileInfo?.email || "N/A"}</p>
+                    <p className="text-sm text-gray-700">{profileInfo?.user.email || "N/A"}</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-black">Constituency</h4>
-                    <p className="text-sm text-gray-700">{profileInfo?.constituency || "N/A"}</p>
+                    <p className="text-sm text-gray-700">
+                      {constituencies.find((c) => c.id === profileInfo?.constituency)?.name || "N/A"}
+                    </p>
                   </div>
                 </div>
 
@@ -123,7 +155,6 @@ const TableProfile = () => {
               </div>
             </div>
 
-            {/* Button */}
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
@@ -137,9 +168,7 @@ const TableProfile = () => {
         {/* CDF Stats */}
         <div className="w-full lg:flex-1">
           <div className="bg-gray-200 shadow-lg rounded-2xl p-6 border">
-            <h2 className="text-2xl font-semibold mb-6 text-black pb-2">
-              CDF Statistics
-            </h2>
+            <h2 className="text-2xl font-semibold mb-6 text-black pb-2">CDF Statistics</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((item, index) => (
                 <div
@@ -166,10 +195,9 @@ const TableProfile = () => {
         </div>
       </div>
 
-      {/* Projects */}
       <ProfileProject />
 
-      {/* Modal */}
+      {/* Edit Modal */}
       {isModalOpen && (
         <div
           className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50"
@@ -186,7 +214,7 @@ const TableProfile = () => {
                 <input
                   type="text"
                   name="first_name"
-                  value={formData.first_name || ""}
+                  value={formData.user?.first_name || ""}
                   onChange={handleChange}
                   className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
                 />
@@ -196,7 +224,7 @@ const TableProfile = () => {
                 <input
                   type="text"
                   name="last_name"
-                  value={formData.last_name || ""}
+                  value={formData.user?.last_name || ""}
                   onChange={handleChange}
                   className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
                 />
@@ -206,7 +234,7 @@ const TableProfile = () => {
                 <input
                   type="email"
                   name="email"
-                  value={formData.email || ""}
+                  value={formData.user?.email || ""}
                   onChange={handleChange}
                   className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
                 />
