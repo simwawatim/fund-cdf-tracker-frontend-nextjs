@@ -1,29 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import ProgramService, { ProgramAPI } from "../../api/program/program";
 
-// -------------------- CDF Categories Data --------------------
-interface CDFCategory {
-  name: string;
-  description: string;
-  duration: string;
-  mode: string;
-  coordinator: string;
-  contact: string;
-}
-
-const initialCategories: CDFCategory[] = [
-  { name: "IT Training", description: "Basic and advanced IT skills", duration: "6-12 Weeks", mode: "Online/Onsite", coordinator: "Alice Smith", contact: "+260 955 123456" },
-  { name: "Health Programs", description: "Community health and hygiene", duration: "8 Weeks", mode: "Onsite", coordinator: "Bob Johnson", contact: "+260 955 654321" },
-  { name: "Agriculture Skills", description: "Farming and livestock management", duration: "10 Weeks", mode: "Onsite", coordinator: "Carol Lee", contact: "+260 977 112233" },
-];
-
-// -------------------- CDF Categories Table --------------------
 const CDFCategoriesTable = () => {
-  const [categories, setCategories] = useState(initialCategories);
+  const [categories, setCategories] = useState<ProgramAPI[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<CDFCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<ProgramAPI | null>(null);
 
   const itemsPerPage = 3;
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -31,72 +16,143 @@ const CDFCategoriesTable = () => {
   const currentCategories = categories.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(categories.length / itemsPerPage);
 
-  const [formData, setFormData] = useState<CDFCategory>({
-    name: "",
-    description: "",
-    duration: "",
-    mode: "",
-    coordinator: "",
-    contact: "",
-  });
+  const [formData, setFormData] = useState({ name: "", description: "" });
 
+  // ----------------------------
+  // Fetch all programs on mount
+  // ----------------------------
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      const response = await ProgramService.getPrograms();
+      if (response.status === "success") {
+        setCategories(response.data as ProgramAPI[]);
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+    };
+    fetchPrograms();
+  }, []);
+
+  // ----------------------------
+  // Modal openers
+  // ----------------------------
   const openAddModal = () => {
     setEditingCategory(null);
-    setFormData({ name: "", description: "", duration: "", mode: "", coordinator: "", contact: "" });
+    setFormData({ name: "", description: "" });
     setIsModalOpen(true);
   };
 
-  const openEditModal = (category: CDFCategory) => {
+  const openEditModal = (category: ProgramAPI) => {
     setEditingCategory(category);
-    setFormData({ ...category });
+    setFormData({ name: category.name, description: category.description });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // ----------------------------
+  // Handle form submission
+  // ----------------------------
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (editingCategory) {
-      setCategories(categories.map((c) => (c === editingCategory ? formData : c)));
+      // Update existing program
+      const response = await ProgramService.updateProgram(
+        editingCategory.id,
+        formData.name,
+        formData.description
+      );
+      if (response.status === "success") {
+        Swal.fire("Updated!", "Program updated successfully.", "success");
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === editingCategory.id ? (response.data as ProgramAPI) : c
+          )
+        );
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
     } else {
-      setCategories([...categories, formData]);
+      // Create new program
+      const response = await ProgramService.createProgram(
+        formData.name,
+        formData.description
+      );
+      if (response.status === "success") {
+        Swal.fire("Created!", "Program added successfully.", "success");
+        setCategories((prev) => [...prev, response.data as ProgramAPI]);
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
     }
+
     setIsModalOpen(false);
+  };
+
+  // ----------------------------
+  // Delete program
+  // ----------------------------
+  const handleDelete = async (id: number) => {
+    const confirm = await Swal.fire({
+      title: "Are you sure?",
+      text: "This program will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (confirm.isConfirmed) {
+      const response = await ProgramService.deleteProgram(id);
+      if (response.status === "success") {
+        Swal.fire("Deleted!", "Program deleted successfully.", "success");
+        setCategories((prev) => prev.filter((c) => c.id !== id));
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+    }
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-black">CDF Programs Offered</h1>
 
+      {/* Add button */}
       <div className="mb-4">
-        <button onClick={openAddModal} className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black">
-          Add Category
+        <button
+          onClick={openAddModal}
+          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
+        >
+          Add Program
         </button>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg shadow-md">
           <thead className="bg-gray-200 text-gray-700">
             <tr>
-              <th className="text-left py-3 px-6">Category Name</th>
+              <th className="text-left py-3 px-6">Program Name</th>
               <th className="text-left py-3 px-6">Description</th>
-              <th className="text-left py-3 px-6">Duration</th>
-              <th className="text-left py-3 px-6">Mode</th>
-              <th className="text-left py-3 px-6">Coordinator</th>
-              <th className="text-left py-3 px-6">Contact</th>
-              <th className="text-left py-3 px-6">Edit</th>
+              <th className="text-left py-3 px-6 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {currentCategories.map((category, index) => (
-              <tr key={index} className="border-b hover:bg-gray-50">
+            {currentCategories.map((category) => (
+              <tr key={category.id} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{category.name}</td>
                 <td className="py-3 text-black px-6">{category.description}</td>
-                <td className="py-3 text-black px-6">{category.duration}</td>
-                <td className="py-3 text-black px-6">{category.mode}</td>
-                <td className="py-3 text-black px-6">{category.coordinator}</td>
-                <td className="py-3 text-black px-6">{category.contact}</td>
-                <td className="py-3 text-black px-6">
-                  <button onClick={() => openEditModal(category)} className="text-blue-600 hover:underline">
+                <td className="py-3 px-6 flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal(category)}
+                    className="text-blue-600 hover:underline"
+                  >
                     Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(category.id)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -107,19 +163,31 @@ const CDFCategoriesTable = () => {
 
       {/* Pagination */}
       <div className="flex justify-center mt-4 space-x-2">
-        <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          className="px-3 py-1 bg-green-900 text-white rounded hover:bg-black"
+        >
           Prev
         </button>
         {[...Array(totalPages)].map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrentPage(i + 1)}
-            className={`px-3 py-1 rounded hover:bg-gray-300 ${currentPage === i + 1 ? "bg-black text-white" : "bg-white text-black"}`}
+            className={`px-3 py-1 rounded ${
+              currentPage === i + 1
+                ? "bg-black text-white"
+                : "bg-white text-black hover:bg-gray-200"
+            }`}
           >
             {i + 1}
           </button>
         ))}
-        <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300">
+        <button
+          onClick={() =>
+            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+          }
+          className="px-3 py-1 bg-green-900 text-white rounded hover:bg-black"
+        >
           Next
         </button>
       </div>
@@ -128,24 +196,42 @@ const CDFCategoriesTable = () => {
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
           <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-96 p-6 relative text-black">
-            <h2 className="text-2xl font-bold mb-4">{editingCategory ? "Edit Category" : "Add Category"}</h2>
+            <h2 className="text-2xl font-bold mb-4">
+              {editingCategory ? "Edit Program" : "Add Program"}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-              {Object.keys(formData).map((field) => (
-                <input
-                  key={field}
-                  type="text"
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                  value={formData[field as keyof CDFCategory]}
-                  onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                  className="w-full border px-3 py-2 rounded text-black"
-                  required
-                />
-              ))}
+              <input
+                type="text"
+                placeholder="Program Name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+              />
               <div className="flex justify-end space-x-2 mt-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
+                >
                   {editingCategory ? "Update" : "Add"}
                 </button>
               </div>

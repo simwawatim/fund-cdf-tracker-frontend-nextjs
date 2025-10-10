@@ -11,7 +11,7 @@ const HeaderComp = () => {
                     <Link href="/home" className="flex items-center space-x-2">
                     <img
                         className="h-12 w-auto object-contain rounded-md shadow-sm"
-                        src="/zambia-flag.png"
+                        src="/cdf-logo-2.png"
                         alt="Company Logo"
                     />
                     <span className="ml-2 text-xl font-semibold text-white">Dashboard</span>

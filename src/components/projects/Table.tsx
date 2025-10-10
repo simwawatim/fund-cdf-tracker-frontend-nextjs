@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ConstituencyService from "../../api/constituency/constituency";
+import ProgramService, { ProgramAPI } from "../../api/program/program";
+import ProjectService, {ProjectAPI } from "../../api/project/project"
+import Swal from "sweetalert2";
+import Link from "next/link";
 
-// -------------------- Projects Data --------------------
+
 interface Project {
+  id: number
   name: string;
   constituency: number;
-  project_type: string;
+  program: number;
   description: string;
   allocated_budget: number;
   status: string;
@@ -19,176 +25,30 @@ interface Project {
   remarks: string;
 }
 
-const initialProjects: Project[] = [
-  {
-    name: "Lusaka Water Project",
-    constituency: 1,
-    project_type: "Infrastructure",
-    description: "Water supply improvement",
-    allocated_budget: 5000000,
-    status: "Planned",
-    start_date: "2025-10-01",
-    end_date: "2026-03-01",
-    beneficiaries_count: 5000,
-    project_manager: "John Doe",
-    funding_source: "CDF",
-    location: "Lusaka",
-    remarks: "Urgent priority",
-  },
-  {
-    name: "Kitwe School Renovation",
-    constituency: 2,
-    project_type: "Education",
-    description: "Renovation of classrooms and labs",
-    allocated_budget: 2000000,
-    status: "Ongoing",
-    start_date: "2025-06-15",
-    end_date: "2025-12-15",
-    beneficiaries_count: 1200,
-    project_manager: "Mary Banda",
-    funding_source: "CDF",
-    location: "Kitwe",
-    remarks: "High priority",
-  },
-  {
-    name: "Ndola Road Expansion",
-    constituency: 3,
-    project_type: "Infrastructure",
-    description: "Expanding main roads for better traffic flow",
-    allocated_budget: 7500000,
-    status: "Planned",
-    start_date: "2025-11-01",
-    end_date: "2026-06-01",
-    beneficiaries_count: 8000,
-    project_manager: "Peter Mwansa",
-    funding_source: "CDF",
-    location: "Ndola",
-    remarks: "",
-  },
-  {
-    name: "Livingstone Health Clinic Upgrade",
-    constituency: 4,
-    project_type: "Health",
-    description: "Upgrade medical equipment and facilities",
-    allocated_budget: 3000000,
-    status: "Ongoing",
-    start_date: "2025-05-01",
-    end_date: "2025-11-01",
-    beneficiaries_count: 3500,
-    project_manager: "Grace Phiri",
-    funding_source: "CDF",
-    location: "Livingstone",
-    remarks: "Critical need",
-  },
-  {
-    name: "Chingola Solar Electrification",
-    constituency: 5,
-    project_type: "Energy",
-    description: "Install solar panels in rural areas",
-    allocated_budget: 4000000,
-    status: "Planned",
-    start_date: "2025-09-01",
-    end_date: "2026-03-01",
-    beneficiaries_count: 4500,
-    project_manager: "David Zulu",
-    funding_source: "CDF",
-    location: "Chingola",
-    remarks: "",
-  },
-  {
-    name: "Mufulira Market Construction",
-    constituency: 6,
-    project_type: "Commerce",
-    description: "Build new market stalls and storage",
-    allocated_budget: 1500000,
-    status: "Completed",
-    start_date: "2025-01-15",
-    end_date: "2025-07-15",
-    beneficiaries_count: 2000,
-    project_manager: "Linda Mwale",
-    funding_source: "CDF",
-    location: "Mufulira",
-    remarks: "Completed on time",
-  },
-  {
-    name: "Kabwe Library Modernization",
-    constituency: 7,
-    project_type: "Education",
-    description: "Upgrade library infrastructure",
-    allocated_budget: 1000000,
-    status: "Planned",
-    start_date: "2025-12-01",
-    end_date: "2026-06-01",
-    beneficiaries_count: 800,
-    project_manager: "Thomas Lungu",
-    funding_source: "CDF",
-    location: "Kabwe",
-    remarks: "",
-  },
-  {
-    name: "Solwezi Bridge Rehabilitation",
-    constituency: 8,
-    project_type: "Infrastructure",
-    description: "Repair and reinforce old bridge",
-    allocated_budget: 6000000,
-    status: "Ongoing",
-    start_date: "2025-07-01",
-    end_date: "2026-01-01",
-    beneficiaries_count: 5000,
-    project_manager: "Ruth Musonda",
-    funding_source: "CDF",
-    location: "Solwezi",
-    remarks: "Safety critical",
-  },
-  {
-    name: "Ndola Youth Sports Center",
-    constituency: 3,
-    project_type: "Recreation",
-    description: "Build sports facilities for youth",
-    allocated_budget: 2500000,
-    status: "Planned",
-    start_date: "2025-10-15",
-    end_date: "2026-04-15",
-    beneficiaries_count: 1000,
-    project_manager: "Kennedy Phiri",
-    funding_source: "CDF",
-    location: "Ndola",
-    remarks: "",
-  },
-  {
-    name: "Lusaka Public Park Revamp",
-    constituency: 1,
-    project_type: "Recreation",
-    description: "Landscape and renovate public park",
-    allocated_budget: 1800000,
-    status: "Planned",
-    start_date: "2025-11-01",
-    end_date: "2026-05-01",
-    beneficiaries_count: 3000,
-    project_manager: "Alice Tembo",
-    funding_source: "CDF",
-    location: "Lusaka",
-    remarks: "Community priority",
-  },
-];
+interface Constituency {
+  id: number;
+  name: string;
+}
 
-// -------------------- Projects Table Component --------------------
 const ProjectsTable = () => {
-  const [projects, setProjects] = useState(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [programType, setProgramTypes] = useState<ProgramAPI[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentProjects = projects.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(projects.length / itemsPerPage);
 
   const [formData, setFormData] = useState<Project>({
+    id: 0,
     name: "",
     constituency: 0,
-    project_type: "",
+    program: 0,
     description: "",
     allocated_budget: 0,
     status: "",
@@ -199,14 +59,61 @@ const ProjectsTable = () => {
     funding_source: "",
     location: "",
     remarks: "",
-  });
+  })
+
+  const handleGetConstituencies = async () =>{
+    try{
+      const response = await ConstituencyService.getConstituencies();
+      setConstituencies(response);
+    }
+
+    catch(error){
+        console.error("Error fetching constituencies:", error);
+        Swal.fire("Error", "Failed to fetch constituencies", "error");
+    }
+  }
+
+  const handleGetProjects = async () =>{
+    const response = await ProjectService.getProjects();
+    if (response.status === "success"){
+      setProjects(Array.isArray(response.data) ? response.data as Project[] : [response.data as Project])
+    }else{
+      Swal.fire("Error", response.message, "error");
+    }
+  }
+
+  const handleGetPrograms = async () => {
+    try{
+      const response = await ProgramService.getPrograms();
+      if (response.status === "success"){
+        setProgramTypes(response.data as ProgramAPI[]);
+
+      }else{
+        Swal.fire("Error", response.message, "error");
+      }
+    }
+
+    catch(error){
+        console.error("Error fetching programs:", error);
+        Swal.fire("Error", "Failed to fetch programs", "error");
+    }
+
+  }
+
+
+  useEffect(() => {
+    handleGetConstituencies();
+    handleGetPrograms();
+    handleGetProjects();
+  }, []);
 
   const openAddModal = () => {
     setEditingProject(null);
     setFormData({
+      id: 0,
       name: "",
       constituency: 0,
-      project_type: "",
+      program: 0,
       description: "",
       allocated_budget: 0,
       status: "",
@@ -227,14 +134,44 @@ const ProjectsTable = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+
     e.preventDefault();
-    if (editingProject) {
+    try {
+      if (editingProject) {
       setProjects(projects.map((p) => (p === editingProject ? formData : p)));
-    } else {
-      setProjects([...projects, formData]);
+      } 
+      
+      else {
+        setProjects([...projects, formData]);
+        console.log(formData)
+        const response = await ProjectService.createProject(
+          
+          formData.name,
+          formData.description,
+          formData.constituency,
+          formData.program, 
+          formData.allocated_budget,
+          formData.start_date,
+          formData.end_date,
+          formData.beneficiaries_count,
+          formData.remarks
+        );
+
+        Swal.fire("Success", "Project created successfully!", "success");
+
+      }
+
+      setIsModalOpen(false);
     }
-    setIsModalOpen(false);
+    catch (error: any) {
+      console.log("Error creating project:", error)
+            Swal.fire("Error", error?.message || "Something went wrong", "error");
+    }
+
+
+    
+
   };
 
   return (
@@ -253,17 +190,12 @@ const ProjectsTable = () => {
             <tr>
               <th className="text-left py-3 px-6">Name</th>
               <th className="text-left py-3 px-6">Constituency</th>
-              <th className="text-left py-3 px-6">Type</th>
-              <th className="text-left py-3 px-6">Description</th>
+              <th className="text-left py-3 px-6">Program</th>
               <th className="text-left py-3 px-6">Budget</th>
               <th className="text-left py-3 px-6">Status</th>
-              <th className="text-left py-3 px-6">Manager</th>
               <th className="text-left py-3 px-6">Start</th>
               <th className="text-left py-3 px-6">End</th>
               <th className="text-left py-3 px-6">Beneficiaries</th>
-              <th className="text-left py-3 px-6">Funding</th>
-              <th className="text-left py-3 px-6">Location</th>
-              <th className="text-left py-3 px-6">Remarks</th>
               <th className="text-left py-3 px-6">Edit</th>
             </tr>
           </thead>
@@ -271,23 +203,31 @@ const ProjectsTable = () => {
             {currentProjects.map((project, index) => (
               <tr key={index} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{project.name}</td>
-                <td className="py-3 text-black px-6">{project.constituency}</td>
-                <td className="py-3 text-black px-6">{project.project_type}</td>
-                <td className="py-3 text-black px-6">{project.description}</td>
+                <td className="py-3 text-black px-6">
+                  {
+                    constituencies.find((c) => c.id === project.constituency)?.name || "Unknown"
+                  }
+                </td>
+                <td className="py-3 text-black px-6">
+                  {
+                    programType.find((p) => p.id === project.program)?.name || "Unknown"
+                  }
+                </td>
+
                 <td className="py-3 text-black px-6">{project.allocated_budget.toLocaleString()}</td>
                 <td className="py-3 text-black px-6">{project.status}</td>
-                <td className="py-3 text-black px-6">{project.project_manager}</td>
                 <td className="py-3 text-black px-6">{project.start_date}</td>
                 <td className="py-3 text-black px-6">{project.end_date}</td>
                 <td className="py-3 text-black px-6">{project.beneficiaries_count}</td>
-                <td className="py-3 text-black px-6">{project.funding_source}</td>
-                <td className="py-3 text-black px-6">{project.location}</td>
-                <td className="py-3 text-black px-6">{project.remarks}</td>
                 <td className="py-3 text-black px-6">
-                  <a href="/project-view" className="text-blue-600 hover:underline">
+                  <Link
+                    href={`/project-view/${project.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
                     View
-                  </a>
+                  </Link>
                 </td>
+
               </tr>
             ))}
           </tbody>
@@ -315,38 +255,193 @@ const ProjectsTable = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-          <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-96 p-6 relative text-black overflow-y-auto max-h-[90vh]">
-            <h2 className="text-2xl font-bold mb-4">{editingProject ? "Edit Project" : "Add Project"}</h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {Object.keys(formData).map((field) => (
-                <input
-                  key={field}
-                  type={field === "allocated_budget" || field === "constituency" || field === "beneficiaries_count" ? "number" : "text"}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ")}
-                  value={formData[field as keyof Project]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      [field]: field === "allocated_budget" || field === "constituency" || field === "beneficiaries_count" ? Number(e.target.value) : e.target.value,
-                    })
-                  }
-                  className="w-full border px-3 py-2 rounded text-black"
-                  required
-                />
-              ))}
-              <div className="flex justify-end space-x-2 mt-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black">
-                  {editingProject ? "Update" : "Add"}
-                </button>
-              </div>
-            </form>
-          </div>
+  <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+    <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
+      <h2 className="text-2xl font-bold mb-4">
+        {editingProject ? "Edit Project" : "Add Project"}
+      </h2>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        {/* Project Name */}
+        <div>
+          <label>Project Name</label>
+          <input
+            type="text"
+            placeholder="Project Name"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData({ ...formData, name: e.target.value })
+            }
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            required
+          />
         </div>
-      )}
+
+        {/* Constituency */}
+        <div>
+          <label>Constituency</label>
+          <select
+            value={formData.constituency}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                constituency: Number(e.target.value),
+              })
+            }
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            required
+          >
+            <option value={0} disabled>
+              Select Constituency
+            </option>
+            {constituencies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Project Type */}
+        <div>
+          <label>Project Type</label>
+          <select
+            value={formData.program}
+            onChange={(e) =>
+              setFormData({ ...formData, program: Number(e.target.value) })
+            }
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            required
+          >
+            <option value={0} disabled>
+              Select Project Type
+            </option>
+            {programType.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+        </div>
+
+        {/* Beneficiaries Count */}
+        <div>
+          <label>Beneficiaries Count</label>
+          <input
+            type="number"
+            placeholder="Beneficiaries Count"
+            value={formData.beneficiaries_count}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                beneficiaries_count: Number(e.target.value),
+              })
+            }
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            required
+          />
+        </div>
+
+        {/* Allocated Budget */}
+        <div>
+          <label>Allocated Budget</label>
+          <input
+            type="number"
+            placeholder="Allocated Budget"
+            value={formData.allocated_budget}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                allocated_budget: Number(e.target.value),
+              })
+            }
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            required
+          />
+        </div>
+
+        {/* Start Date */}
+        <div>
+          <label>Start Date</label>
+          <input
+            type="date"
+            placeholder="Start Date"
+            value={formData.start_date}
+            onChange={(e) =>
+              setFormData({ ...formData, start_date: e.target.value })
+            }
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        {/* End Date */}
+        <div>
+          <label>End Date</label>
+          <input
+            type="date"
+            placeholder="End Date"
+            value={formData.end_date}
+            onChange={(e) =>
+              setFormData({ ...formData, end_date: e.target.value })
+            }
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Description */}
+        <div className="col-span-2">
+          <label>Description</label>
+          <textarea
+            placeholder="Description"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            rows={3}
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+            required
+          ></textarea>
+        </div>
+
+        {/* Remarks */}
+        <div className="col-span-2">
+          <label>Remarks</label>
+          <textarea
+            placeholder="Remarks"
+            value={formData.remarks}
+            onChange={(e) =>
+              setFormData({ ...formData, remarks: e.target.value })
+            }
+            rows={3}
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+          ></textarea>
+        </div>
+
+        {/* Buttons */}
+        <div className="col-span-2 flex justify-end space-x-2 mt-6">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(false)}
+            className="px-4 py-2 rounded bg-red-500 hover:bg-gray-400 text-white"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
+          >
+            {editingProject ? "Update" : "Add"}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 };
