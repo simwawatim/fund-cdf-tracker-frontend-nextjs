@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import Swal from "sweetalert2";
 import ProjectService, { ProjectAPI } from "../../api/project/project";
 import { CommentsAPI } from "../../api/comment/comment";
+import MemberService, { CreateMemberPayload, UserProfileAPI } from "../../api/member/member";
+
 
 
 const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
@@ -36,6 +38,17 @@ interface CommentAPI {
   is_active: boolean;
 }
 
+interface Member {
+  id?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  constituency: number;
+  phone: string;
+  image: string;
+}
+
 const ProjectViewTable = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -46,6 +59,7 @@ const ProjectViewTable = () => {
   const [progressData, setProgressData] = useState<ProgressUpdate[]>([]);
   const [comments, setComments] = useState<CommentAPI[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+    const [createdBy, setCreatedBy] = useState<UserProfileAPI | null>(null);
 
   // Progressive loading for sections
   useEffect(() => {
@@ -55,17 +69,41 @@ const ProjectViewTable = () => {
     }
   }, [sectionIndex]);
 
-  // Fetch project details
+  const getConstituencyName = () => {
+    if (!createdBy || !createdBy.constituency) return "N/A";
+    return `Constituency ${createdBy.constituency}`;
+  };
+
   useEffect(() => {
     if (!id) return;
 
-    const fetchProject = async () => {
+    const fetchProjectAndCreator = async () => {
       try {
         const response = await ProjectService.getProjectById(Number(id));
         if (response.status === "success") {
-          setProjectDetails(Array.isArray(response.data) ? response.data[0] : response.data);
+          const project = Array.isArray(response.data) ? response.data[0] : response.data;
+          setProjectDetails(project);
+
+          // Fetch current user if no creator defined
+          if (project.created_by) {
+            const memberResponse = await MemberService.getMemberById(Number(project.created_by));
+            if (memberResponse.status === "success" && memberResponse.data) {
+              setCreatedBy({
+                ...memberResponse.data,
+                image: memberResponse.data.image || "/default-profile.png",
+              });
+            }
+          } else {
+            const currentMember = await MemberService.getCurrentMember();
+            if (currentMember.status === "success" && currentMember.data) {
+              setCreatedBy({
+                ...currentMember.data,
+                image: currentMember.data.image || "/default-profile.png",
+              });
+            }
+          }
         } else {
-          await Swal.fire("Error", response.message, "error");
+          await Swal.fire("Error", response.message as string, "error");
         }
       } catch (err) {
         console.error("Error fetching project:", err);
@@ -73,7 +111,7 @@ const ProjectViewTable = () => {
       }
     };
 
-    fetchProject();
+    fetchProjectAndCreator();
   }, [id]);
 
   // Fetch project updates
@@ -94,6 +132,7 @@ const ProjectViewTable = () => {
     };
     fetchUpdates();
   }, [id]);
+
 
   // Fetch comments
   useEffect(() => {
@@ -392,26 +431,24 @@ const ProjectViewTable = () => {
         </div>
 
         <div className="flex-1 max-w-xs self-start">
-          {sectionIndex >= 4 ? (
+          {sectionIndex >= 4 && createdBy && (
             <CreatedByInfo
               creator={{
-                name: "Jonathan Reinink",
-                avatar: "/default-profile.png",
+                name: `${createdBy.user.first_name} ${createdBy.user.last_name}`,
+                avatar: createdBy.image || "/default-profile.png",
                 date: "Aug 18",
-                email: "example@email.com",
-                mobile: "+123 456 789",
-                constituency: { name: "Example Constituency", role: "Representative" },
+                email: createdBy.user.email,
+                mobile: createdBy.phone,
+                constituency: { name: getConstituencyName(), role: createdBy.role },
               }}
             />
-          ) : (
-            <div className="h-64 animate-pulse bg-gray-200 rounded-lg mb-4" />
           )}
         </div>
       </div>
 
       {/* Bottom Section */}
       <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        <div className="flex-1">
+        <div className="flex-2">
           {sectionIndex >= 5 ? (
             <ProgressTable data={progressData} onViewFile={setSelectedFile} />
           ) : (

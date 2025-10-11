@@ -2,7 +2,7 @@ import axios from "axios";
 import BASE_API_URL from "../base/base";
 
 export interface ProjectAPI {
-  id: number;
+  id: string | number;
   name: string;
   constituency: number;
   program: number;

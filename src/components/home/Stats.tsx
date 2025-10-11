@@ -1,38 +1,67 @@
 "use client";
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-
-const data = [
-  { name: "Jan", Users: 400, Projects: 24 },
-  { name: "Feb", Users: 300, Projects: 32 },
-  { name: "Mar", Users: 500, Projects: 28 },
-  { name: "Apr", Users: 200, Projects: 35 },
-  { name: "May", Users: 278, Projects: 40 },
-  { name: "Jun", Users: 189, Projects: 25 },
-  { name: "Jul", Users: 350, Projects: 30 },
-  { name: "Aug", Users: 420, Projects: 36 },
-  { name: "Sep", Users: 380, Projects: 29 },
-  { name: "Oct", Users: 450, Projects: 42 },
-  { name: "Nov", Users: 390, Projects: 31 },
-  { name: "Dec", Users: 500, Projects: 45 },
-];
+import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const HomeStats = () => {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/stats/")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.status === "success") setData(json.data);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
   return (
     <div className="space-y-6">
-      {/* Graph Section */}
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl text-black font-semibold mb-4">User & Project Growth</h2>
+      <div className="bg-black shadow-lg rounded-2xl p-6 border border-gray-800">
+        <h2 className="text-2xl text-gray-100 font-semibold mb-4">
+          User & Project Growth
+        </h2>
         <div className="w-full h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="Users" stroke="#8884d8" activeDot={{ r: 8 }} />
-              <Line type="monotone" dataKey="Projects" stroke="#82ca9d" />
+            <LineChart
+              data={data}
+              margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
+              <XAxis dataKey="name" stroke="#a0aec0" />
+              <YAxis stroke="#a0aec0" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1a202c",
+                  border: "1px solid #2d3748",
+                  borderRadius: "8px",
+                  color: "#e2e8f0",
+                }}
+              />
+              <Legend wrapperStyle={{ color: "#e2e8f0" }} />
+              <Line
+                type="monotone"
+                dataKey="Users"
+                stroke="#60a5fa" // Light blue
+                strokeWidth={3}
+                activeDot={{ r: 8, fill: "#3b82f6" }}
+              />
+              <Line
+                type="monotone"
+                dataKey="Projects"
+                stroke="#34d399" // Emerald green
+                strokeWidth={3}
+                activeDot={{ r: 8, fill: "#10b981" }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
