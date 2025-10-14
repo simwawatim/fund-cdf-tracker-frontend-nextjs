@@ -23,6 +23,7 @@ interface Project {
   funding_source: string;
   location: string;
   remarks: string;
+  created_by: number;
 }
 
 interface Constituency {
@@ -59,6 +60,7 @@ const ProjectsTable = () => {
     funding_source: "",
     location: "",
     remarks: "",
+    created_by: 9,
   })
 
   const handleGetConstituencies = async () =>{
@@ -124,6 +126,8 @@ const ProjectsTable = () => {
       funding_source: "",
       location: "",
       remarks: "",
+      created_by: 9,
+
     });
     setIsModalOpen(true);
   };
@@ -138,6 +142,8 @@ const ProjectsTable = () => {
 
     e.preventDefault();
     try {
+
+      const staticCreator = 9; 
       if (editingProject) {
       setProjects(projects.map((p) => (p === editingProject ? formData : p)));
       } 
@@ -145,6 +151,7 @@ const ProjectsTable = () => {
       else {
         setProjects([...projects, formData]);
         console.log(formData)
+       
         const response = await ProjectService.createProject(
           
           formData.name,
@@ -155,10 +162,20 @@ const ProjectsTable = () => {
           formData.start_date,
           formData.end_date,
           formData.beneficiaries_count,
-          formData.remarks
+          formData.remarks,
+          staticCreator,
+          
         );
 
-        Swal.fire("Success", "Project created successfully!", "success");
+        if (response.status === "success"){
+            Swal.fire("Success", "Project created successfully!", "success");
+        }
+
+        else{
+           Swal.fire("Error", response.message || "Something went wrong", "error");
+        }
+
+
 
       }
 

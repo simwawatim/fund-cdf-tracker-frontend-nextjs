@@ -17,7 +17,7 @@ export interface ProjectAPI {
   funding_source: string;
   location: string;
   remarks: string;
-  created_by: string;
+  created_by: number;
   updated_by: string;
   created_at: string;
   updated_at: string;
@@ -87,9 +87,10 @@ class ProjectService {
     start_date: string,
     end_date: string,
     beneficiaries_count: number,
-    remarks: string
+    remarks: string,
+    create_by: number
   ): Promise<ProjectResponse> {
-    if (!name || !description || !constituency || !program || !allocated_budget || !start_date || !end_date || !remarks || !beneficiaries_count) {
+    if (!name || !description || !constituency || !program || !allocated_budget || !start_date || !end_date || !remarks || !beneficiaries_count || !create_by ) {
       return { status: "error", message: "All fields are required" };
     }
 
@@ -106,6 +107,7 @@ class ProjectService {
           end_date,
           beneficiaries_count,
           remarks,
+          created_by: 9,
         }
       );
       return response.data;
