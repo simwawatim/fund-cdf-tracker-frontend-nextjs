@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 import ProjectService, { ProjectAPI } from "../../api/project/project";
 import { CommentsAPI } from "../../api/comment/comment";
 import MemberService, { CreateMemberPayload, UserProfileAPI } from "../../api/member/member";
+import ProgramService, { ProgramAPI } from "../../api/program/program";
 
 
 
@@ -59,9 +60,9 @@ const ProjectViewTable = () => {
   const [progressData, setProgressData] = useState<ProgressUpdate[]>([]);
   const [comments, setComments] = useState<CommentAPI[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
-    const [createdBy, setCreatedBy] = useState<UserProfileAPI | null>(null);
-
-  // Progressive loading for sections
+  const [createdBy, setCreatedBy] = useState<UserProfileAPI | null>(null);
+  const [categories, setCategories] = useState<ProgramAPI[]>([]);
+  
   useEffect(() => {
     if (sectionIndex < 5) {
       const timer = setTimeout(() => setSectionIndex((prev) => prev + 1), 1000);
@@ -160,6 +161,19 @@ const ProjectViewTable = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      const response = await ProgramService.getPrograms();
+      if (response.status === "success") {
+        setCategories(response.data as ProgramAPI[]);
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+    };
+    fetchPrograms();
+  }, []);
+  
+
   const handleAddComment = async (message: string, parent: number | null = null): Promise<void> => {
     if (!id) {
       await Swal.fire("Error", "Project ID missing", "error");
@@ -171,7 +185,7 @@ const ProjectViewTable = () => {
     }
 
     const storedUser = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
-    const userId = storedUser ? Number(storedUser) : 1;
+    const userId = storedUser ? Number(storedUser) : 12;
 
     try {
       const response = await CommentsAPI.createComment(Number(id), userId, message, parent);
@@ -252,6 +266,8 @@ const ProjectViewTable = () => {
     const [newMessage, setNewMessage] = useState("");
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editingText, setEditingText] = useState("");
+
+
 
     return (
       <div className="bg-white shadow rounded-2xl p-4">
@@ -384,9 +400,15 @@ const ProjectViewTable = () => {
     );
   };
 
+  
+      const programName = projectDetails
+  ? categories.find((cat) => cat.id === projectDetails.program)?.name || "Unknown Program"
+  : "Unknown Program";
+
   return (
     <>
       {/* Top Section */}
+      
       <div className="flex flex-col lg:flex-row gap-6 p-4 w-full items-start">
         <div className="bg-gray-100 shadow-md rounded-2xl p-4 flex-1 flex flex-col space-y-4 max-h-[500px] overflow-y-auto">
           {sectionIndex >= 1 && projectDetails ? (
@@ -409,10 +431,10 @@ const ProjectViewTable = () => {
           ) : (
             <div className="h-12 animate-pulse bg-gray-200 rounded-lg mb-4" />
           )}
-
+          
           {sectionIndex >= 3 && projectDetails ? (
             <ProjectDetails
-              program={String(projectDetails.program)}
+              program={programName}
               budget="ZMW 5,000,000"
               beneficiaries={String(projectDetails.beneficiaries_count || "0")}
               manager="John Doe"
