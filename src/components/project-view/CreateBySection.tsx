@@ -46,7 +46,7 @@ const CreatedByInfo = ({ creator }: SidebarInfoProps) => (
 
     {/* Contact Info */}
     <div>
-      <p className="text-gray-900 font-semibold text-lg mb-3 border-b pb-1">
+      <p className="text-gray-900 font-semibold text-lg mb-3">
         Contact Info
       </p>
       <p className="text-gray-700 text-sm">
@@ -59,7 +59,7 @@ const CreatedByInfo = ({ creator }: SidebarInfoProps) => (
 
     {/* Constituency Info */}
     <div>
-      <p className="text-gray-900 font-semibold text-lg mb-3 border-b pb-1">
+      <p className="text-gray-900 font-semibold">
         Constituency Info
       </p>
       <p className="text-gray-700 text-sm">

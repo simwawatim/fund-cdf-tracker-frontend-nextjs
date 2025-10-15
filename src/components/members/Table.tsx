@@ -31,7 +31,7 @@ const MembersTable = () => {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentMembers = members.slice(indexOfFirstItem, indexOfLastItem);

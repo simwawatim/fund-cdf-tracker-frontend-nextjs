@@ -1,369 +1,265 @@
 "use client";
 
-import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from "react";
+import { useRouter } from "next/router";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import Swal from "sweetalert2";
+import ProjectService, { ProjectAPI } from "../../api/project/project";
+import { CommentsAPI } from "../../api/comment/comment";
+import MemberService, { UserProfileAPI } from "../../api/member/member";
 
-import { EllipsisVertical } from "lucide-react";
+const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
+const ProjectDetails = dynamic(() => import("./ProjectDetails"), { ssr: false });
+const ProgressTable = dynamic(() => import("./ProgressTable"), { ssr: false });
+const CreatedByInfo = dynamic(() => import("./CreateBySection"), { ssr: false });
+
+// Types
 interface ProgressUpdate {
   id: number;
   user: string;
   avatar: string;
-  updateType: string;
-  progress: number;
+  update_type: string;
+  progress_percentage: string | number;
   remarks: string;
   date: string;
   fileUrl: string;
 }
 
+interface CommentAPI {
+  id: number;
+  project: number;
+  user: number;
+  user_name: string;
+  message: string;
+  parent: number | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
 const ProjectViewTable = () => {
+  const router = useRouter();
+  const { id } = router.query;
+
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [sectionIndex, setSectionIndex] = useState(0);
+  const [projectDetails, setProjectDetails] = useState<ProjectAPI | null>(null);
+  const [progressData, setProgressData] = useState<ProgressUpdate[]>([]);
+  const [comments, setComments] = useState<CommentAPI[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [createdBy, setCreatedBy] = useState<UserProfileAPI | null>(null);
 
-  // ---------------- Dummy Progress Data ----------------
-  const progressData: ProgressUpdate[] = [
-    {
-      id: 1,
-      user: "John Doe",
-      avatar: "https://i.pravatar.cc/40?img=1",
-      updateType: "Progress",
-      progress: 20,
-      remarks: "Initial phase completed",
-      date: "2025-10-06",
-      fileUrl: "completion-report.pdf",
-    },
-    {
-      id: 2,
-      user: "Jane Smith",
-      avatar: "https://i.pravatar.cc/40?img=2",
-      updateType: "Progress",
-      progress: 45,
-      remarks: "Foundation works ongoing",
-      date: "2025-10-05",
-      fileUrl: "completion-report.pdf",
-    },
-    {
-      id: 3,
-      user: "Admin",
-      avatar: "https://i.pravatar.cc/40?img=3",
-      updateType: "Completion",
-      progress: 100,
-      remarks: "Project successfully completed",
-      date: "2025-10-04",
-      fileUrl: "completion-report.pdf",
-    },
-  ];
+  // Section loader animation
+  useEffect(() => {
+    if (sectionIndex < 5) {
+      const timer = setTimeout(() => setSectionIndex((prev) => prev + 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [sectionIndex]);
 
-  const commentsData = [
-  {
-    id: 1,
-    user: "Bonnie Green",
-    time: "11:46 AM",
-    message: "That's awesome. I think our users will really appreciate the improvements.",
-    status: "Delivered",
-    avatar: "https://i.pravatar.cc/40?img=1",
-  },
-  {
-    id: 2,
-    user: "John Doe",
-    time: "12:02 PM",
-    message: "I’ve updated the API integration, can you check the logs?",
-    status: "Seen",
-    avatar: "https://i.pravatar.cc/40?img=2",
-  },
-  {
-    id: 3,
-    user: "Jane Smith",
-    time: "12:10 PM",
-    message: "Looks good on my end. We can deploy tomorrow morning.",
-    status: "Delivered",
-    avatar: "https://i.pravatar.cc/40?img=3",
-  },
-];
+  // Fetch project & creator
+  useEffect(() => {
+    if (!id) return;
 
-  // ---------------- File Modal ----------------
-  const handleViewFile = (fileUrl: string) => {
-    setSelectedFile(fileUrl);
+    const fetchProjectAndCreator = async () => {
+      try {
+        const response = await ProjectService.getProjectById(Number(id));
+        if (response.status === "success") {
+          const project = Array.isArray(response.data) ? response.data[0] : response.data;
+          setProjectDetails(project);
+
+          // Fetch current user if no creator defined
+          if (project.created_by) {
+            const memberResponse = await MemberService.getMemberById(Number(project.created_by));
+            if (memberResponse.status === "success" && memberResponse.data) {
+              setCreatedBy({
+                ...memberResponse.data,
+                image: memberResponse.data.image || "/default-profile.png",
+              });
+            }
+          } else {
+            const currentMember = await MemberService.getCurrentMember();
+            if (currentMember.status === "success" && currentMember.data) {
+              setCreatedBy({
+                ...currentMember.data,
+                image: currentMember.data.image || "/default-profile.png",
+              });
+            }
+          }
+        } else {
+          await Swal.fire("Error", response.message as string, "error");
+        }
+      } catch (err) {
+        console.error("Error fetching project:", err);
+        await Swal.fire("Error", "Failed to load project data", "error");
+      }
+    };
+
+    fetchProjectAndCreator();
+  }, [id]);
+
+  // Fetch project updates
+  useEffect(() => {
+    if (!id) return;
+    const fetchUpdates = async () => {
+      try {
+        const response = await ProjectService.getProjectUpdateBasedOnProjectId(Number(id));
+        if (response.status === "success" && Array.isArray(response.data)) {
+          setProgressData(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching project update:", err);
+        await Swal.fire("Error", "Failed to load project update data", "error");
+      }
+    };
+    fetchUpdates();
+  }, [id]);
+
+  // Fetch comments
+  useEffect(() => {
+    if (!id) return;
+    fetchComments(Number(id));
+  }, [id]);
+
+  const fetchComments = async (projectId: number) => {
+    setLoadingComments(true);
+    try {
+      const response = await CommentsAPI.getComments(projectId);
+      if (response.status === "success") {
+        const data = Array.isArray(response.data) ? response.data : [response.data];
+        setComments(
+          (data as CommentAPI[]).sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch comments:", err);
+      await Swal.fire("Error", "Failed to load comments", "error");
+    } finally {
+      setLoadingComments(false);
+    }
   };
 
-  const closeModal = () => {
-    setSelectedFile(null);
+  const handleAddComment = async (message: string, parent: number | null = null) => {
+    if (!id || !message.trim()) return;
+    const storedUser = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+    const userId = storedUser ? Number(storedUser) : 1;
+
+    try {
+      const response = await CommentsAPI.createComment(Number(id), userId, message, parent);
+      if (response.status === "success") {
+        await fetchComments(Number(id));
+      }
+    } catch (err) {
+      console.error("Create comment failed:", err);
+    }
+  };
+
+  const handleEditComment = async (commentId: number, newMessage: string) => {
+    if (!commentId || !newMessage.trim()) return;
+    try {
+      const response = await CommentsAPI.updateComment(commentId, newMessage);
+      if (response.status === "success") await fetchComments(Number(id));
+    } catch (err) {
+      console.error("Update comment failed:", err);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!commentId) return;
+    try {
+      const response = await CommentsAPI.deleteComment(commentId);
+      if (response.status === "success") await fetchComments(Number(id));
+    } catch (err) {
+      console.error("Delete comment failed:", err);
+    }
+  };
+
+  const getConstituencyName = () => {
+    if (!createdBy || !createdBy.constituency) return "N/A";
+    return `Constituency ${createdBy.constituency}`;
   };
 
   return (
     <>
-      {/* =================== First Row =================== */}
-      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        {/* 8/12 section */}
-        <div className="bg-gray-100 shadow-md rounded-2xl p-6 flex flex-col flex-[8] space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-900 font-semibold text-lg">
-                Lusaka Water Project
-              </p>
-              <p className="text-gray-500 text-sm">
-                Oct 01, 2025 – Mar 01, 2026
-              </p>
-            </div>
-
-            <div>
-              <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200">
-                🕒 Planned
-              </span>
-            </div>
-
-            <button className="flex items-center bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg shadow-sm transition">
-              <svg
-                className="w-4 h-4 mr-2"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z" />
-              </svg>
-              Update
-            </button>
-          </div>
-
-          {/* Description */}
-          <div className="border-t pt-4">
-            <p className="text-gray-900 font-semibold text-lg mb-2">
-              Description
-            </p>
-            <p className="text-gray-700 text-sm">
-              Water supply improvement project aimed at improving clean water
-              access across Lusaka.
-            </p>
-          </div>
-
-          {/* Details Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Project Type
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">Infrastructure</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Allocated Budget
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">ZMW 5,000,000</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Beneficiaries
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">5,000</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Project Manager
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">John Doe</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Funding Source
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">CDF</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Location
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">Lusaka</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 font-medium text-gray-700">
-                    Remarks
-                  </td>
-                  <td className="py-2 px-4 text-gray-900">Urgent priority</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 4/12 section (Right Side Info) */}
-        <div className="bg-gray-100 shadow-md text-black rounded-2xl p-6 flex flex-col flex-[4] space-y-6">
-          <div>
-            <p className="text-sm text-gray-600 flex items-center font-medium">
-              <svg
-                className="fill-current text-gray-700 w-4 h-4 mr-2"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path d="M4 8V6a6 6 0 1 1 12 0v2h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-8c0-1.1.9-2 2-2h1zm5 6.73V17h2v-2.27a2 2 0 1 0-2 0zM7 6v2h6V6a3 3 0 0 0-6 0z" />
-              </svg>
-              Created By
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <img
-              className="w-12 h-12 rounded-full border border-gray-300"
-              src="/default-profile.png"
-              alt="Avatar"
+      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full items-start">
+        <div className="bg-gray-100 shadow-md rounded-2xl p-4 flex-1 flex flex-col space-y-4 max-h-[500px] overflow-y-auto">
+          {sectionIndex >= 1 && projectDetails && (
+            <ProjectHeader
+              id={Number(id)}
+              name={projectDetails.name}
+              period={`${projectDetails.start_date} – ${projectDetails.end_date}`}
+              status={projectDetails.status || "Unknown"}
+              initialProgress={projectDetails.completion_percentage || 0}
             />
-            <div>
-              <p className="text-gray-900 font-medium">Jonathan Reinink</p>
-              <p className="text-gray-500 text-sm">Aug 18</p>
+          )}
+          {sectionIndex >= 2 && projectDetails && (
+            <div className="border-t pt-2">
+              <p className="text-gray-900 font-semibold text-lg mb-1">Description</p>
+              <p className="text-gray-700 text-sm">{projectDetails.description}</p>
             </div>
-          </div>
-
-          <div>
-            <p className="text-gray-900 font-semibold text-lg mb-3 border-b pb-1">
-              Contact Info
-            </p>
-            <p className="text-gray-700 text-sm">
-              <span className="font-medium">Email:</span> example@email.com
-            </p>
-            <p className="text-gray-700 text-sm">
-              <span className="font-medium">Mobile:</span> +123 456 789
-            </p>
-          </div>
-
-          <div>
-            <p className="text-gray-900 font-semibold text-lg mb-3 border-b pb-1">
-              Constituency Info
-            </p>
-            <p className="text-gray-700 text-sm">
-              <span className="font-medium">Name:</span> Example Constituency
-            </p>
-            <p className="text-gray-700 text-sm">
-              <span className="font-medium">Role:</span> Representative
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* =================== Second Row =================== */}
-      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        {/* 8/12 section */}
-        <div className="bg-gray-100 shadow text-black rounded-2xl p-6 h-96 overflow-y-auto flex-[8]">
-          <h2 className="text-lg font-semibold mb-3 text-gray-800">
-            Project Progress Updates
-          </h2>
-
-          <table className="min-w-full bg-white rounded-lg shadow-sm text-sm">
-            <thead className="bg-gray-200 text-gray-700 text-xs uppercase tracking-wide">
-              <tr>
-                <th className="text-left py-2 px-4">#</th>
-                <th className="text-left py-2 px-4">User</th>
-                <th className="text-left py-2 px-4">Update Type</th>
-                <th className="text-left py-2 px-4">Progress (%)</th>
-                <th className="text-left py-2 px-4">Remarks</th>
-                <th className="text-left py-2 px-4">Date</th>
-                <th className="text-left py-2 px-4">File</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700">
-              {progressData.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b hover:bg-gray-50 transition"
-                >
-                  <td className="py-2 px-4">{item.id}</td>
-                  <td className="py-2 px-4 flex items-center gap-2">
-                    <img
-                      src={item.avatar}
-                      alt={item.user}
-                      className="w-6 h-6 rounded-full"
-                    />
-                    <span className="text-sm">{item.user}</span>
-                  </td>
-                  <td className="py-2 px-4">{item.updateType}</td>
-                  <td className="py-2 px-4">{item.progress}%</td>
-                  <td className="py-2 px-4 text-gray-600">{item.remarks}</td>
-                  <td className="py-2 px-4 text-gray-500 text-xs">
-                    {item.date}
-                  </td>
-                  <td className="py-2 px-4">
-                    <button
-                      onClick={() => handleViewFile(item.fileUrl)}
-                      className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 transition"
-                    >
-                      View File
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* 4/12 section */}
-        <div className="bg-gray-100 shadow text-black rounded-2xl p-6 h-96 flex flex-col justify-between flex-[4]">
-          
-           <div className="bg-gray-100 shadow text-black rounded-2xl p-6 h-96 flex flex-col flex-[4]">
-      <h2 className="text-lg font-semibold mb-4 text-gray-800">Comments</h2>
-
-      {/* Comments Scrollable Area */}
-      <div className="overflow-y-auto space-y-4 pr-2 flex-1">
-        {commentsData.map((comment: { id: Key | null | undefined; avatar: string | Blob | undefined; user: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; time: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; message: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; status: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }) => (
-          <div key={comment.id} className="flex items-start gap-3 bg-white p-3 rounded-xl shadow-sm">
-            <img
-              className="w-8 h-8 rounded-full border border-gray-300"
-              src={comment.avatar}
-              alt={typeof comment.user === "string" ? comment.user : String(comment.user ?? "")}
+          )}
+          {sectionIndex >= 3 && projectDetails && (
+            <ProjectDetails
+              program={String(projectDetails.program)}
+              budget="ZMW 5,000,000"
+              beneficiaries={String(projectDetails.beneficiaries_count || "0")}
+              manager="John Doe"
+              source="CDF"
+              location="Lusaka"
+              remarks={String(projectDetails.remarks)}
             />
-            <div className="flex flex-col w-full leading-tight">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold text-gray-900">{comment.user}</span>
-                <span className="text-xs text-gray-500">{comment.time}</span>
-              </div>
-              <p className="text-sm text-gray-700 mt-1">{comment.message}</p>
-              <span className="text-xs text-gray-400 mt-1">{comment.status}</span>
-            </div>
-            <button className="p-2 hover:bg-gray-200 rounded-full transition">
-              <EllipsisVertical size={16} className="text-gray-500" />
-            </button>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
 
-      {/* Add Comment Section */}
-      <div className="mt-4 border-t pt-3 flex items-center gap-2">
-        <input
-          type="text"
-          placeholder="Write a comment..."
-          className="flex-1 text-sm p-2 border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
-        />
-        <button className="bg-blue-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-blue-700 transition">
-          Send
-        </button>
-      </div>
-    </div>
-
-
+        <div className="flex-1 max-w-xs self-start">
+          {sectionIndex >= 4 && createdBy && (
+            <CreatedByInfo
+              creator={{
+                name: `${createdBy.user.first_name} ${createdBy.user.last_name}`,
+                avatar: createdBy.image || "/default-profile.png",
+                date: "Aug 18",
+                email: createdBy.user.email,
+                mobile: createdBy.phone,
+                constituency: { name: getConstituencyName(), role: createdBy.role },
+              }}
+            />
+          )}
         </div>
       </div>
 
-      {/* ---------------- File Preview Modal ---------------- */}
+      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
+        <div className="flex-1">
+          {sectionIndex >= 5 && <ProgressTable data={progressData} onViewFile={setSelectedFile} />}
+        </div>
+        <div className="flex-1">
+          {sectionIndex >= 5 && (
+            <CommentsSection
+              comments={comments}
+              loading={loadingComments}
+              onAdd={handleAddComment}
+              onEdit={handleEditComment}
+              onDelete={handleDeleteComment}
+            />
+          )}
+        </div>
+      </div>
+
       {selectedFile && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
           <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-3xl p-4 relative">
             <button
-              onClick={closeModal}
+              onClick={() => setSelectedFile(null)}
               className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
             >
               ✕
             </button>
-
             <h3 className="text-lg text-black mb-3">File Preview</h3>
-
             {selectedFile.endsWith(".pdf") ? (
-              <iframe
-                src={selectedFile}
-                className="w-full h-96 rounded-md border"
-                title="PDF Preview"
-              ></iframe>
+              <iframe src={selectedFile} className="w-full h-96 rounded-md border" title="PDF Preview" />
             ) : (
-              <img
-                src={selectedFile}
-                alt="File Preview"
-                className="w-full h-96 object-contain rounded-md"
-              />
+              <img src={selectedFile} alt="File Preview" className="w-full h-96 object-contain rounded-md" />
             )}
           </div>
         </div>
