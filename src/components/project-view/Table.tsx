@@ -114,7 +114,6 @@ const ProjectViewTable = () => {
     fetchProjectAndCreator();
   }, [id]);
 
-  // Fetch project updates
   useEffect(() => {
     if (!id) return;
     const fetchUpdates = async () => {
@@ -134,7 +133,6 @@ const ProjectViewTable = () => {
   }, [id]);
 
 
-  // Fetch comments
   useEffect(() => {
     if (!id) return;
     fetchComments(Number(id));
@@ -189,7 +187,6 @@ const ProjectViewTable = () => {
     }
   };
 
-  // ✅ Update comment (Promise<void>)
   const handleEditComment = async (commentId: number, newMessage: string): Promise<void> => {
     if (!commentId) {
       await Swal.fire("Error", "Comment ID required", "error");
@@ -214,7 +211,6 @@ const ProjectViewTable = () => {
     }
   };
 
-  // ✅ Delete comment (Promise<void>)
   const handleDeleteComment = async (commentId: number): Promise<void> => {
     if (!commentId) return;
     const confirmed = await Swal.fire({
@@ -240,7 +236,6 @@ const ProjectViewTable = () => {
     }
   };
 
-  // ✅ Inline Comments UI
   const CommentsSection = ({
     comments,
     loading,
