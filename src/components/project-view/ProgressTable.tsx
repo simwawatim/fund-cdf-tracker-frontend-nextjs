@@ -7,7 +7,7 @@ interface ProgressUpdate {
   id: number;
   user: string;
   avatar: string;
-  update_type: string;
+  status: string;
   progress_percentage: number;
   remarks: string;
   date: string;
@@ -21,8 +21,9 @@ interface ProgressTableProps {
 
 const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5; // number of rows per page
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
+  const rowsPerPage = 5;
   const totalPages = Math.ceil(data.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const currentData = data.slice(startIndex, startIndex + rowsPerPage);
@@ -41,6 +42,10 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRow(expandedRow === id ? null : id);
   };
 
   return (
@@ -64,68 +69,100 @@ const ProgressTable = ({ data, onViewFile }: ProgressTableProps) => {
           </thead>
 
           <tbody>
-            {currentData.map((item, index) => (
-              <tr
-                key={item.id || index}
-                className="border-b hover:bg-gray-50 transition duration-150"
-              >
-                <td className="py-2 px-4 text-gray-900">
-                  {startIndex + index + 1}
-                </td>
-                <td className="py-2 px-4 flex items-center gap-2">
-                  <img
-                    src={item.avatar || "https://i.pravatar.cc/40?img=3"}
-                    alt={item.user}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-300"
-                  />
-                  <span className="font-medium text-gray-900 text-sm">
-                    {item.user}
-                  </span>
-                </td>
+            {currentData.map((item, index) => {
+              const isExpanded = expandedRow === item.id;
+              const shortText =
+                item.remarks.length > 80
+                  ? item.remarks.slice(0, 80) + "..."
+                  : item.remarks;
 
-                <td className="py-2 px-4">
-                  <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-semibold">
-                    {item.update_type}
-                  </span>
-                </td>
-                <td className="py-2 px-4 text-gray-900 font-medium">
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-1.5 rounded-full ${
-                          item.progress_percentage >= 100
-                            ? "bg-green-600"
-                            : "bg-blue-600"
-                        }`}
-                        style={{ width: `${item.progress_percentage}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs">
-                      {item.progress_percentage}%
-                    </span>
-                  </div>
-                </td>
-
-                <td className="py-2 px-4 text-gray-600 text-sm truncate max-w-xs">
-                  {item.remarks}
-                </td>
-
-                <td className="py-2 px-4 text-gray-500 text-xs">
-                  {formatDate(item.date)}
-                </td>
-
-                <td className="py-2 px-4">
-                  <button
-                    onClick={() =>
-                      onViewFile(item.fileUrl || "/completion-report.pdf")
-                    }
-                    className="bg-green-800 text-white p-1.5 rounded hover:bg-black transition flex items-center justify-center"
+              return (
+                <>
+                  <tr
+                    key={item.id || index}
+                    className="border-b hover:bg-gray-50 transition duration-150"
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    <td className="py-2 px-4 text-gray-900">
+                      {startIndex + index + 1}
+                    </td>
+
+                    <td className="py-2 px-4 flex items-center gap-2">
+                      <img
+                        src={item.avatar || "https://i.pravatar.cc/40?img=3"}
+                        alt={item.user}
+                        className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                      />
+                      <span className="font-medium text-gray-900 text-sm">
+                        {item.user}
+                      </span>
+                    </td>
+
+                    <td className="py-2 px-4">
+                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-semibold">
+                        {item.status}
+                      </span>
+                    </td>
+
+                    <td className="py-2 px-4 text-gray-900 font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              item.progress_percentage >= 100
+                                ? "bg-green-600"
+                                : "bg-blue-600"
+                            }`}
+                            style={{ width: `${item.progress_percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs">
+                          {item.progress_percentage}%
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="py-2 px-4 text-gray-600 text-sm max-w-xs">
+                      {shortText}
+                      {item.remarks.length > 30 && (
+                        <button
+                          onClick={() => toggleRow(item.id)}
+                          className="ml-2 text-blue-600 hover:underline text-xs"
+                        >
+                          {isExpanded ? "Hide" : "Read more"}
+                        </button>
+                      )}
+                    </td>
+
+                    <td className="py-2 px-4 text-gray-500 text-xs">
+                      {formatDate(item.date)}
+                    </td>
+
+                    <td className="py-2 px-4">
+                      <button
+                        onClick={() =>
+                          onViewFile(item.fileUrl || "/completion-report.pdf")
+                        }
+                        className="bg-green-800 text-white p-1.5 rounded hover:bg-black transition flex items-center justify-center"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+
+                  {isExpanded && (
+                    <tr className="bg-gray-50 border-b">
+                      <td colSpan={7} className="p-4 text-gray-700">
+                        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                          <p className="text-sm leading-relaxed whitespace-pre-line">
+                            {item.remarks}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
 
             {data.length === 0 && (
               <tr>

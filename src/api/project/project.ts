@@ -51,7 +51,7 @@ export type ProjectResponse = ProjectSuccess | ProjectError;
 
 export interface ProjectUpdateAPI {
   project: number; 
-  update_type: "progress" | "status" | string;
+  status: "progress" | "status" | string;
   progress_percentage?: number;
   remarks?: string;
   updated_by: number;
@@ -136,7 +136,7 @@ class ProjectService {
   }
 
   async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse> {
-    if (!data.project || !data.update_type || !data.updated_by) {
+    if (!data.project || !data.status || !data.updated_by) {
       return { status: "error", message: "Project, update_type, and updated_by are required." };
     }
 
