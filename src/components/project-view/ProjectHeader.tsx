@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import ProjectService, { ProjectUpdateAPI } from "../../api/project/project";
+import { useState, ChangeEvent } from "react";
+import ProjectService, { ProjectUpdateAPI, ProjectUpdateSupportingDocumentPayload  } from "../../api/project/project";
 import Swal from "sweetalert2";
 
 interface ProjectHeaderProps {
@@ -25,8 +25,8 @@ const ProjectHeader = ({
   const [remarks, setRemarks] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const [file, setFile] = useState<File | null>(null); // New state for file
 
-  // 🧠 Automatically suggest a status based on progress
   const getStatusFromProgress = (progress: number): string => {
     if (progress === 0) return "not_started";
     if (progress > 0 && progress < 25) return "planning";
@@ -38,23 +38,30 @@ const ProjectHeader = ({
   };
 
   const handleProgressChange = (value: number) => {
-    setProgressPercentage(value);
-    // Only auto-adjust status if project is not locked
-    if (projectStatus !== "on_hold" && projectStatus !== "cancelled" && projectStatus !== "completed") {
-      const suggestedStatus = getStatusFromProgress(value);
-      setProjectStatus(suggestedStatus);
+    const clampedValue = Math.max(value, initialProgress);
+    setProgressPercentage(clampedValue);
+
+    if (!["on_hold", "cancelled", "completed"].includes(projectStatus)) {
+      setProjectStatus(getStatusFromProgress(clampedValue));
+    }
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
     }
   };
 
   const handleUpdate = async () => {
     if (isSubmitting) return;
 
+    // Validation
     if (progressPercentage < initialProgress) {
       Swal.fire("Warning", `You cannot decrease progress below ${initialProgress}%.`, "warning");
       return;
     }
 
-    if (isNaN(progressPercentage) || progressPercentage < 0 || progressPercentage > 100) {
+    if (progressPercentage < 0 || progressPercentage > 100 || isNaN(progressPercentage)) {
       Swal.fire("Warning", "Progress must be between 0 and 100.", "warning");
       return;
     }
@@ -69,12 +76,12 @@ const ProjectHeader = ({
       return;
     }
 
-    if (remarks.trim().length === 0) {
+    if (!remarks.trim()) {
       Swal.fire("Warning", "Please add remarks before saving.", "warning");
       return;
     }
 
-    if (projectStatus === status && progressPercentage === initialProgress) {
+    if (projectStatus === status && progressPercentage === initialProgress && !file) {
       Swal.fire("Info", "No changes detected to update.", "info");
       return;
     }
@@ -95,10 +102,23 @@ const ProjectHeader = ({
     try {
       setIsSubmitting(true);
       const response = await ProjectService.createProjectUpdate(data);
+
       if (response.status === "success") {
+        if (file) {
+           const docResponse = await ProjectService.createProjectUpdateSupportingDocumentFile(file, id, 1);
+
+          if (docResponse.status === "success") {
+            console.log("File uploaded successfully.");
+          } else {
+            console.error("Failed to upload file:", docResponse.message);
+          }
+        }
+
         Swal.fire("Success", "Project update saved successfully!", "success");
         setIsModalOpen(false);
         setLastUpdateTime(new Date());
+        setFile(null);
+        setRemarks("");
       } else {
         Swal.fire("Error", response.message || "Failed to update project.", "error");
       }
@@ -109,7 +129,7 @@ const ProjectHeader = ({
     }
   };
 
-  const getStatusColor = (status: string): string => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
         return "bg-green-100 text-green-700";
@@ -128,17 +148,14 @@ const ProjectHeader = ({
     }
   };
 
-  // 🧱 Check if project is locked (completed or cancelled)
-  const isStatusLocked = projectStatus === "completed" || projectStatus === "cancelled";
+  const isStatusLocked = ["completed", "cancelled"].includes(projectStatus);
 
   return (
     <div className="bg-white shadow-md rounded-lg p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between">
       <div>
         <h2 className="text-2xl font-semibold text-gray-800">{name}</h2>
         <p className="text-gray-500">{period}</p>
-        <span
-          className={`inline-block px-3 py-1 rounded-full text-sm mt-2 ${getStatusColor(projectStatus)}`}
-        >
+        <span className={`inline-block px-3 py-1 rounded-full text-sm mt-2 ${getStatusColor(projectStatus)}`}>
           {projectStatus.replace("_", " ")}
         </span>
       </div>
@@ -174,9 +191,7 @@ const ProjectHeader = ({
                       : "border-gray-300 focus:ring-indigo-500"
                   }`}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Current progress: {initialProgress}%
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Current progress: {initialProgress}%</p>
               </div>
 
               {/* Status */}
@@ -222,7 +237,19 @@ const ProjectHeader = ({
                       ? "bg-gray-100 cursor-not-allowed border-gray-300"
                       : "border-gray-300 focus:ring-indigo-500"
                   }`}
-                ></textarea>
+                />
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-black">Attach File</label>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  disabled={isStatusLocked}
+                  className="mt-2 block w-full text-gray-900"
+                />
+                {file && <p className="text-xs mt-1 text-gray-500">Selected file: {file.name}</p>}
               </div>
             </div>
 

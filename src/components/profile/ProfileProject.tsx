@@ -1,8 +1,6 @@
 "use client";
-
 import { useState } from "react";
 
-// -------------------- Projects Data --------------------
 interface Project {
   name: string;
   constituency: number;
@@ -172,7 +170,7 @@ const initialProjects: Project[] = [
   },
 ];
 
-// -------------------- Projects Table Component --------------------
+
 const ProfileProject = () => {
   const [projects, setProjects] = useState(initialProjects);
   const [currentPage, setCurrentPage] = useState(1);

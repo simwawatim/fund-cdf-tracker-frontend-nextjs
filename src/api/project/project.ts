@@ -24,6 +24,15 @@ export interface ProjectAPI {
   is_active: boolean;
 }
 
+
+export interface ProjectUpdateSupportingDocumentPayload  {
+  project_id: number;
+  title: string;
+  doc_type: string;
+  file_url: string;
+  uploaded_by: number;
+} 
+
 export interface ProjectUpdateProgress {
   id: number;
   project: number;
@@ -170,6 +179,32 @@ class ProjectService {
       };
     }
   }
+
+  async createProjectUpdateSupportingDocumentFile(file: File, project_id: number, uploaded_by: number) {
+    const formData = new FormData();
+    formData.append("project", project_id.toString());
+    formData.append("title", `Update Document - ${new Date().toISOString()}`);
+    formData.append("doc_type", "report");
+    formData.append("uploaded_by", uploaded_by.toString());
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post<ProjectUpdateResponse>(
+        `${BASE_API_URL}/api/project-documents/v1/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      return response.data;
+    } catch (err: any) {
+      return {
+        status: "error",
+        message: err.response?.data?.message || err.message || "Failed to upload file",
+      };
+    }
+  }
+
 
 }
 
