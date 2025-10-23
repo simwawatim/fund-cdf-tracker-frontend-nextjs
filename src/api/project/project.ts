@@ -59,12 +59,14 @@ export interface ProjectError {
 export type ProjectResponse = ProjectSuccess | ProjectError;
 
 export interface ProjectUpdateAPI {
-  project: number; 
+  project: number;
   status: "progress" | "status" | string;
   progress_percentage?: number;
   remarks?: string;
+  file?: File | null;
   updated_by: number;
 }
+
 
 export interface ProjectUpdateResponse {
   status: "success" | "error";
@@ -144,25 +146,46 @@ class ProjectService {
     }
   }
 
-  async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse> {
-    if (!data.project || !data.status || !data.updated_by) {
-      return { status: "error", message: "Project, update_type, and updated_by are required." };
-    }
+async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse> {
+  if (!data.project || !data.status || !data.updated_by) {
+    return { status: "error", message: "Project, status, and updated_by are required." };
+  }
 
-    try {
-      const response = await axios.post<ProjectUpdateResponse>(
+  try {
+    let response;
+    if (data.file) {
+      // Send multipart/form-data
+      const formData = new FormData();
+      formData.append("project", data.project.toString());
+      formData.append("status", data.status);
+      if (data.progress_percentage !== undefined)
+        formData.append("progress_percentage", data.progress_percentage.toString());
+      if (data.remarks) formData.append("remarks", data.remarks);
+      formData.append("updated_by", data.updated_by.toString());
+      formData.append("file", data.file);
+
+      response = await axios.post<ProjectUpdateResponse>(
+        `${BASE_API_URL}api/project-updates/v1/`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+    } else {
+      // Send JSON if no file
+      response = await axios.post<ProjectUpdateResponse>(
         `${BASE_API_URL}api/project-updates/v1/`,
         data,
         { headers: { "Content-Type": "application/json" } }
       );
-      return response.data;
-    } catch (err: any) {
-      return {
-        status: "error",
-        message: `Failed to create project update: ${err.message || err}`,
-      };
     }
+
+    return response.data;
+  } catch (err: any) {
+    return {
+      status: "error",
+      message: err.response?.data?.message || err.message || "Failed to create project update.",
+    };
   }
+}
 
 
   async getProjectUpdateBasedOnProjectId(projectId: number): Promise<ProjectUpdateResponse> {
@@ -180,7 +203,7 @@ class ProjectService {
     }
   }
 
-  async createProjectUpdateSupportingDocumentFile(file: File, project_id: number, uploaded_by: number) {
+  async createProjectUpdateSupportingDocumentFile(file: File, project_id: number, uploaded_by: number , project_update_id: number): Promise<ProjectUpdateResponse> {
     const formData = new FormData();
     formData.append("project", project_id.toString());
     formData.append("title", `Update Document - ${new Date().toISOString()}`);
@@ -201,6 +224,21 @@ class ProjectService {
       return {
         status: "error",
         message: err.response?.data?.message || err.message || "Failed to upload file",
+      };
+    }
+  }
+
+  async getProjectUpdateSupportingDocuments(projectId: number): Promise<ProjectUpdateResponse> {
+    if (!projectId) return { status: "error", message: "Project ID is required." };
+    try {
+      const response = await axios.get<ProjectUpdateResponse>(
+        `${BASE_API_URL}api/projects/${projectId}/documents/`
+      );
+      return response.data;
+    } catch (err: any) {
+      return {
+        status: "error",
+        message: `Failed to get supporting documents for project ID ${projectId}: ${err.message || err}`,
       };
     }
   }
