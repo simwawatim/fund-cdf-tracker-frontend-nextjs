@@ -45,6 +45,17 @@ const ProjectsTable = () => {
   const currentProjects = projects.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(projects.length / itemsPerPage);
 
+    const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed": return "bg-green-100 text-green-700";
+      case "in_progress": case "halfway": case "almost_done": return "bg-yellow-100 text-yellow-700";
+      case "planning": return "bg-blue-100 text-blue-700";
+      case "on_hold": return "bg-orange-100 text-orange-700";
+      case "cancelled": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
+
   const [formData, setFormData] = useState<Project>({
     id: 0,
     name: "",
@@ -205,37 +216,39 @@ const ProjectsTable = () => {
         <table className="min-w-full bg-white rounded-lg shadow-md">
           <thead className="bg-gray-200 text-gray-700">
             <tr>
+              <th className="text-left py-3 px-6">No</th>
               <th className="text-left py-3 px-6">Name</th>
               <th className="text-left py-3 px-6">Constituency</th>
-              <th className="text-left py-3 px-6">Program</th>
               <th className="text-left py-3 px-6">Budget</th>
               <th className="text-left py-3 px-6">Status</th>
               <th className="text-left py-3 px-6">Start</th>
               <th className="text-left py-3 px-6">End</th>
-              <th className="text-left py-3 px-6">Beneficiaries</th>
               <th className="text-left py-3 px-6">Edit</th>
             </tr>
           </thead>
           <tbody>
             {currentProjects.map((project, index) => (
               <tr key={index} className="border-b hover:bg-gray-50">
+                <td className="py-3 text-black px-6">{project.id}</td>
                 <td className="py-3 text-black px-6">{project.name}</td>
                 <td className="py-3 text-black px-6">
                   {
                     constituencies.find((c) => c.id === project.constituency)?.name || "Unknown"
                   }
                 </td>
-                <td className="py-3 text-black px-6">
-                  {
-                    programType.find((p) => p.id === project.program)?.name || "Unknown"
-                  }
-                </td>
 
                 <td className="py-3 text-black px-6">{project.allocated_budget.toLocaleString()}</td>
-                <td className="py-3 text-black px-6">{project.status}</td>
+                <td className="py-3 px-6">
+  <span
+    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+      project.status
+    )}`}
+  >
+    {project.status.replace("_", " ").toUpperCase()}
+  </span>
+</td>
                 <td className="py-3 text-black px-6">{project.start_date}</td>
                 <td className="py-3 text-black px-6">{project.end_date}</td>
-                <td className="py-3 text-black px-6">{project.beneficiaries_count}</td>
                 <td className="py-3 text-black px-6">
                   <Link
                     href={`/project-view/${project.id}`}

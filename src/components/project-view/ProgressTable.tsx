@@ -82,7 +82,7 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
             {currentData.map((item, index) => {
               const isExpanded = expandedRow === item.id;
               const shortText =
-                item.remarks.length > 80
+                item.remarks.length > 30
                   ? item.remarks.slice(0, 80) + "..."
                   : item.remarks;
 
@@ -98,12 +98,12 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
                   <td className="py-2 px-4 flex items-center gap-2">
                     <img
                       src={item.avatar || "https://i.pravatar.cc/40?img=3"}
-                      alt={item.user}
+                      // alt={item.user}
                       className="w-8 h-8 rounded-full object-cover border border-gray-300"
                     />
-                    <span className="font-medium text-gray-900 text-sm">
+                    {/* <span className="font-medium text-gray-900 text-sm">
                       {item.user}
-                    </span>
+                    </span> */}
                   </td>
 
                   <td className="py-2 px-4">
@@ -114,7 +114,7 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
 
                   <td className="py-2 px-4 text-gray-900 font-medium">
                     <div className="flex items-center gap-2">
-                      <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="w-10 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className={`h-1.5 rounded-full ${
                             item.progress_percentage >= 100
@@ -128,7 +128,7 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
                     </div>
                   </td>
 
-                  <td className="py-2 px-4 text-gray-600 text-sm max-w-xs">
+                  <td className="py-2 px-4 text-gray-600 text-sm">
                     {isExpanded ? item.remarks : shortText}
                     {item.remarks.length > 80 && (
                       <button

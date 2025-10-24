@@ -12,7 +12,6 @@ import {
 
 const SidebarComp = () => {
   const handleLogout = () => {
-    // Add logout logic here
     console.log("User logged out");
   };
 
