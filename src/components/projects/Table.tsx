@@ -239,14 +239,14 @@ const ProjectsTable = () => {
 
                 <td className="py-3 text-black px-6">{project.allocated_budget.toLocaleString()}</td>
                 <td className="py-3 px-6">
-  <span
-    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-      project.status
-    )}`}
-  >
-    {project.status.replace("_", " ").toUpperCase()}
-  </span>
-</td>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      project.status
+                    )}`}
+                  >
+                    {project.status.replace("_", " ").toUpperCase()}
+                  </span>
+                </td>
                 <td className="py-3 text-black px-6">{project.start_date}</td>
                 <td className="py-3 text-black px-6">{project.end_date}</td>
                 <td className="py-3 text-black px-6">

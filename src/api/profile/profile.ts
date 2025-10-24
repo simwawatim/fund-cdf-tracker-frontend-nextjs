@@ -50,7 +50,7 @@ class ProfileService {
 
   async updateProfile(id: number, data: Partial<ProfileAPI>): Promise<MemberResponse> {
     try {
-      const response = await axios.patch(`${BASE_API_URL}/api/users/v1/${id}/`, data);
+      const response = await axios.patch(`${BASE_API_URL}/api/users/update-profile/v1/14/`, data);
       if (response.data?.status === "success") {
         return { status: "success", data: response.data.data as ProfileAPI };
       }

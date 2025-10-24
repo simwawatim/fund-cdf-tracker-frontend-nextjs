@@ -244,17 +244,10 @@ const ProfileProject = () => {
             <tr>
               <th className="text-left py-3 px-6">Name</th>
               <th className="text-left py-3 px-6">Constituency</th>
-              <th className="text-left py-3 px-6">Type</th>
-              <th className="text-left py-3 px-6">Description</th>
               <th className="text-left py-3 px-6">Budget</th>
               <th className="text-left py-3 px-6">Status</th>
-              <th className="text-left py-3 px-6">Manager</th>
               <th className="text-left py-3 px-6">Start</th>
               <th className="text-left py-3 px-6">End</th>
-              <th className="text-left py-3 px-6">Beneficiaries</th>
-              <th className="text-left py-3 px-6">Funding</th>
-              <th className="text-left py-3 px-6">Location</th>
-              <th className="text-left py-3 px-6">Remarks</th>
               <th className="text-left py-3 px-6">Edit</th>
             </tr>
           </thead>
@@ -263,17 +256,10 @@ const ProfileProject = () => {
               <tr key={index} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{project.name}</td>
                 <td className="py-3 text-black px-6">{project.constituency}</td>
-                <td className="py-3 text-black px-6">{project.project_type}</td>
-                <td className="py-3 text-black px-6">{project.description}</td>
                 <td className="py-3 text-black px-6">{project.allocated_budget.toLocaleString()}</td>
                 <td className="py-3 text-black px-6">{project.status}</td>
-                <td className="py-3 text-black px-6">{project.project_manager}</td>
                 <td className="py-3 text-black px-6">{project.start_date}</td>
                 <td className="py-3 text-black px-6">{project.end_date}</td>
-                <td className="py-3 text-black px-6">{project.beneficiaries_count}</td>
-                <td className="py-3 text-black px-6">{project.funding_source}</td>
-                <td className="py-3 text-black px-6">{project.location}</td>
-                <td className="py-3 text-black px-6">{project.remarks}</td>
                 <td className="py-3 text-black px-6">
                   <button onClick={() => openEditModal(project)} className="text-blue-600 hover:underline">
                     Edit
