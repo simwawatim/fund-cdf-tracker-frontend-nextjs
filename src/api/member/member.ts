@@ -1,5 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
 
 export interface CreateMemberPayload {
   user: {
@@ -51,12 +52,12 @@ export interface MemberResponse {
 }
 
 class MemberService {
-  // Create a member
   async createMember(payload: CreateMemberPayload): Promise<MemberResponse> {
     try {
       const response = await axios.post<MemberResponse>(
         `${BASE_API_URL}/api/users/v1/`,
-        payload
+        payload,
+        { headers: getAuthHeader() },
       );
       return response.data;
     } catch (err: any) {
@@ -64,10 +65,13 @@ class MemberService {
     }
   }
 
-  // Get all members
   async getMembers(): Promise<MemberAPI[]> {
     try {
-      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/`);
+      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/`,
+        {
+          headers: getAuthHeader(),
+        }
+      );
       if (response.data.status === "success" && response.data.data) {
         return Array.isArray(response.data.data) ? response.data.data : [response.data.data];
       } else {
@@ -80,17 +84,19 @@ class MemberService {
     }
   }
 
-  // Get member by ID
   async getMemberById(id: number): Promise<MemberResponse> {
     try {
-      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/${id}/`);
+      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/${id}/`,
+                {
+          headers: getAuthHeader(),
+        }
+      );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, "Failed to fetch user");
     }
   }
 
-  // Get currently logged-in member
   async getCurrentMember(): Promise<MemberResponse> {
     try {
       const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/current/`);
@@ -104,12 +110,12 @@ class MemberService {
     }
   }
 
-  // Update member
   async updateMember(id: number, payload: Partial<CreateMemberPayload>): Promise<MemberResponse> {
     try {
       const response = await axios.put<MemberResponse>(
         `${BASE_API_URL}/api/users/v1/${id}/`,
-        payload
+        payload,
+        { headers: getAuthHeader() },
       );
       return response.data;
     } catch (err: any) {
@@ -117,17 +123,19 @@ class MemberService {
     }
   }
 
-  // Delete member
+
   async deleteMember(id: number): Promise<MemberResponse> {
     try {
-      const response = await axios.delete<MemberResponse>(`${BASE_API_URL}/api/users/v1/${id}/`);
+      const response = await axios.delete<MemberResponse>(`${BASE_API_URL}/api/users/v1/${id}/`,
+        { headers: getAuthHeader() },
+      );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, "Failed to delete user");
     }
   }
 
-  // Helper to handle errors
+
   private handleError(err: any, defaultMsg: string): MemberResponse {
     let errorMessage = defaultMsg;
     const msg = err.response?.data?.message;

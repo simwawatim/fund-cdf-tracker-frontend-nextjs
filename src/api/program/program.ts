@@ -1,5 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
 
 export interface ProgramAPI {
   id: number;
@@ -31,7 +32,8 @@ class ProgramService {
     try {
       const response = await axios.post<ProgramSuccess>(
         `${BASE_API_URL}api/programs/v1`,
-        { name, description }
+        { name, description },
+         { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
@@ -45,7 +47,8 @@ class ProgramService {
   async getPrograms(): Promise<ProgramResponse> {
     try {
       const response = await axios.get<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1`
+        `${BASE_API_URL}api/programs/v1`,
+         { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
@@ -59,7 +62,8 @@ class ProgramService {
   async getProgramById(id: number): Promise<ProgramResponse> {
     try {
       const response = await axios.get<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1/${id}`
+        `${BASE_API_URL}api/programs/v1/${id}`,
+         { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
@@ -78,7 +82,8 @@ class ProgramService {
     try {
       const response = await axios.put<ProgramSuccess>(
         `${BASE_API_URL}api/programs/v1/${id}`,
-        { name, description }
+        { name, description },
+         { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
@@ -96,7 +101,8 @@ class ProgramService {
 
     try {
       const response = await axios.delete<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1/${id}`
+        `${BASE_API_URL}api/programs/v1/${id}`,
+         { headers: getAuthHeader() }
       );
       return {
         status: "success",

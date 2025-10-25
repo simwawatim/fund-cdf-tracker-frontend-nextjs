@@ -1,5 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
 
 export interface ConstituencyAPI {
   id: number;
@@ -30,7 +31,8 @@ class ConstituencyService {
     try {
       const response = await axios.post<ConstituencySuccess>(
         `${BASE_API_URL}api/constituencies/v1/`,
-        { name, district }
+        { name, district },
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
@@ -54,7 +56,8 @@ class ConstituencyService {
     try {
       const response = await axios.put<ConstituencySuccess>(
         `${BASE_API_URL}api/constituencies/v1/${id}/`,
-        { name, district }
+        { name, district },
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
@@ -88,7 +91,9 @@ class ConstituencyService {
 
   async deleteConstituency(id: number): Promise<ConstituencyResponse> {
   try {
-    const response = await axios.delete(`${BASE_API_URL}api/constituencies/v1/${id}/`);
+    const response = await axios.delete(`${BASE_API_URL}api/constituencies/v1/${id}/`,
+      {headers: getAuthHeader()}
+    );
     return { status: "success", data: response.data };
   } catch (err: any) {
     let errorMessage = "Failed to delete constituency";

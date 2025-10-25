@@ -1,5 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
 
 export interface ProjectAPI {
   id: string | number;
@@ -129,7 +130,9 @@ class ProjectService {
 
   async getProjects(): Promise<ProjectResponse> {
     try {
-      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/`);
+      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/`,
+        {headers: getAuthHeader()}
+      );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, "Failed to get projects.");
@@ -139,7 +142,9 @@ class ProjectService {
   async getProjectById(id: number): Promise<ProjectResponse> {
     if (!id) return { status: "error", message: "Project ID is required." };
     try {
-      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/${id}/`);
+      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/${id}/`,
+           {headers: getAuthHeader()}
+      );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, `Failed to get project with ID ${id}.`);
@@ -167,7 +172,9 @@ async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse
       response = await axios.post<ProjectUpdateResponse>(
         `${BASE_API_URL}api/project-updates/v1/`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { headers: { 
+                      "Content-Type": "multipart/form-data",
+                      ...getAuthHeader() } }
       );
     } else {
       // Send JSON if no file
@@ -192,7 +199,8 @@ async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse
     if (!projectId) return { status: "error", message: "Project ID is required." };
     try {
       const response = await axios.get<ProjectUpdateResponse>(
-        `${BASE_API_URL}api/project-updates/v1/${projectId}/`
+        `${BASE_API_URL}api/project-updates/v1/${projectId}/`,
+        {headers: getAuthHeader()}
       );
       return response.data;
     } catch (err: any) {
