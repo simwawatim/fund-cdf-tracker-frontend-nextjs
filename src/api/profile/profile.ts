@@ -19,6 +19,8 @@ export interface ProfileAPI {
   constituency: number | null;
   created_at: string;
   updated_at: string;
+  cover_picture: string | null;
+  profile_picture: string | null;
 }
 
 export interface ProfileSuccess {
@@ -69,6 +71,22 @@ class ProfileService {
       return { status: "error", message: error.message || "Unknown error occurred" };
     }
   }
+
+  async getProfilePictureById(userId: number): Promise<{ status: "success"; profile_pic: string } | ProfileError> {
+    try {
+      const response = await axios.get(`${BASE_API_URL}api/user-profiles/picture/${userId}/`);
+
+      if (response.data?.status === "success") {
+        return { status: "success", profile_pic: response.data.profile_pic };
+      }
+
+      return { status: "error", message: response.data?.message || "Failed to fetch profile picture" };
+    } catch (err: any) {
+      const error = handleApiError(err, "Unable to fetch profile picture.");
+      return { status: "error", message: error.message || "Unknown error occurred" };
+    }
+  }
+
 }
 
 export default new ProfileService();

@@ -1,6 +1,7 @@
 export interface DecodedToken {
   user_id: number;
   role: string;
+  profile_id: number;
 }
 
 export function getTokenFromLocalStorage(): string | null {

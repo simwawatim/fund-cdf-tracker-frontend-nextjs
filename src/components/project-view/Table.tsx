@@ -1,17 +1,18 @@
 "use client";
 
 import { useRouter } from "next/router";
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Swal from "sweetalert2";
 import ProjectService, { ProjectAPI, ProjectUpdateAPI } from "../../api/project/project";
 import { CommentsAPI } from "../../api/comment/comment";
-import MemberService, { UserProfileAPI } from "../../api/member/member";
+import MemberService from "../../api/member/member";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
+import BASE_API_URL from "@/api/base/base";
 
 const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
 const ProjectDetails = dynamic(() => import("./ProjectDetails"), { ssr: false });
-const ProgressTable = dynamic(() => import("./ProgressTable"), { ssr: false });
+const ProgressTable: any = dynamic(() => import("./ProgressTable"), { ssr: false });
 const CreatedByInfo = dynamic(() => import("./CreateBySection"), { ssr: false });
 
 interface ProgressUpdate {
@@ -26,6 +27,18 @@ interface ProgressUpdate {
   date: string;
   documents: string[];
   project_update?: number;
+}
+
+interface UserProfileAPI {
+  user: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  image?: string | null;
+  phone?: string | null;
+  role?: string | null;
+  constituency?: any;
 }
 
 interface CommentAPI {
@@ -126,7 +139,7 @@ const CommentsSection = ({ comments, loading, onAdd, onEdit, onDelete }: Comment
                   )}
                 </div>
 
-                <div className="mt-2 flex items-center gap-3">
+                <div className="mt-2 flex items-center gap-3 flex-wrap">
                   <button
                     onClick={() => { setEditingId(c.id); setEditingText(c.message); }}
                     className="text-xs text-blue-600"
@@ -134,15 +147,7 @@ const CommentsSection = ({ comments, loading, onAdd, onEdit, onDelete }: Comment
                     Edit
                   </button>
                   <button onClick={() => onDelete(c.id)} className="text-xs text-red-600">Delete</button>
-                  <button
-                    onClick={async () => {
-                      const reply = prompt("Reply to comment:");
-                      if (reply && reply.trim().length) await onAdd(reply.trim(), c.id);
-                    }}
-                    className="text-xs text-gray-600"
-                  >
-                    Reply
-                  </button>
+                
                 </div>
               </div>
             </div>
@@ -178,7 +183,7 @@ const ProjectViewTable = () => {
     return `Constituency ${createdBy.constituency}`;
   };
 
-  // fetch project and creator
+  // Fetch project and creator
   useEffect(() => {
     if (!id) return;
 
@@ -194,7 +199,7 @@ const ProjectViewTable = () => {
             if (memberResponse.status === "success" && memberResponse.data) {
               setCreatedBy({
                 ...memberResponse.data,
-                image: memberResponse.data.image || "/default-profile.png",
+                image: memberResponse.data.profile_picture || "/default-profile.png",
               });
             }
           } else {
@@ -218,7 +223,7 @@ const ProjectViewTable = () => {
     fetchProjectAndCreator();
   }, [id]);
 
-  // fetch updates and map documents
+  // Fetch updates and map documents
   useEffect(() => {
     if (!id) return;
 
@@ -232,16 +237,19 @@ const ProjectViewTable = () => {
 
         const mappedUpdates: ProgressUpdate[] = updatesResp.data.map((u: any) => ({
           id: u.id,
-          user: "User 1", // adjust as needed
+          user: "User 1",
           avatar: "/default-profile.png",
           status: u.status,
           progress_percentage: u.progress_percentage,
           file: u.file || "",
           remarks: u.remarks,
+          updated_by_id: u.updated_by,
           date: u.date,
-          documents: u.file ? [u.file] : [], // wrap single file in array
+          documents: u.file ? [u.file] : [],
           project_update: u.id,
         }));
+
+        console.log("Mapped Updates:", mappedUpdates);
 
         setProgressData(mappedUpdates);
       } catch (err) {
@@ -253,6 +261,7 @@ const ProjectViewTable = () => {
     fetchUpdatesAndDocs();
   }, [id]);
 
+  // Fetch comments
   useEffect(() => { if (!id) return; fetchComments(Number(id)); }, [id]);
 
   const fetchComments = async (projectId: number) => {
@@ -273,7 +282,7 @@ const ProjectViewTable = () => {
     }
   };
 
-  // fetch programs
+  // Fetch programs
   useEffect(() => {
     const fetchPrograms = async () => {
       const response = await ProgramService.getPrograms();
@@ -322,12 +331,16 @@ const ProjectViewTable = () => {
     if (!confirmed.isConfirmed) return;
 
     try {
-      const response = await CommentsAPI.deleteComment(commentId);
-      if (response.status === "success") await fetchComments(Number(id));
-      else Swal.fire("Error", response.message, "error");
+     const response = await CommentsAPI.deleteComment(commentId);
+
+      if (response.status === "success") {
+        await fetchComments(Number(id));
+      } else {
+        Swal.fire("Error", response.message || "Unable to delete comment", "error");
+      }
     } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Failed to delete comment", "error");
+      console.error("Failed to delete comment:", err);
+      await Swal.fire("Error", "Failed to delete comment", "error");
     }
   };
 
@@ -376,12 +389,13 @@ const ProjectViewTable = () => {
           )}
         </div>
 
-        <div className="flex-1 max-w-xs self-start">
+        <div className="flex-1 max-w-full lg:max-w-xs self-start">
+         
           {sectionIndex >= 4 && createdBy && (
             <CreatedByInfo
               creator={{
                 name: `${createdBy.user.first_name} ${createdBy.user.last_name}`,
-                avatar: createdBy.image || "/default-profile.png",
+                avatar: ` ${BASE_API_URL}${createdBy.image}`,
                 date: "Aug 18",
                 email: createdBy.user.email,
                 mobile: createdBy.phone,
@@ -394,15 +408,17 @@ const ProjectViewTable = () => {
 
       {/* Bottom Section */}
       <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        <div className="flex-2">
+        {/* Progress Table: 8/12 */}
+        <div className="w-full lg:w-8/12 overflow-x-auto">
           {sectionIndex >= 5 ? (
-            <ProgressTable data={progressData} onViewFile={setSelectedFile} />
+            <ProgressTable data={progressData as any} onViewFile={setSelectedFile} />
           ) : (
             <div className="h-64 animate-pulse bg-gray-200 rounded-lg mb-4" />
           )}
         </div>
 
-        <div className="flex-1">
+        {/* Comments Section: 4/12 */}
+        <div className="w-full lg:w-4/12">
           {sectionIndex >= 5 ? (
             <CommentsSection
               comments={comments}
@@ -416,6 +432,7 @@ const ProjectViewTable = () => {
           )}
         </div>
       </div>
+
     </>
   );
 };

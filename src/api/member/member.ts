@@ -16,6 +16,7 @@ export interface CreateMemberPayload {
 }
 
 export interface MemberAPI {
+  profile_picture: string;
   id: number;
   user: {
     id: number;

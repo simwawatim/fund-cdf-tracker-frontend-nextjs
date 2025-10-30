@@ -5,13 +5,13 @@ import { EllipsisVertical } from "lucide-react";
 interface SidebarInfoProps {
   creator: {
     name: string;
-    avatar: string;
+    avatar?: string | null;
     date: string;
-    email: string;
-    mobile: string;
+    email?: string | null;
+    mobile?: string | null;
     constituency: {
       name: string;
-      role: string;
+      role?: string | null;
     };
   };
 }
@@ -35,7 +35,7 @@ const CreatedByInfo = ({ creator }: SidebarInfoProps) => (
     <div className="flex items-center gap-4">
       <img
         className="w-12 h-12 rounded-full border border-gray-300"
-        src={creator.avatar}
+        src={creator.avatar ?? undefined}
         alt="Avatar"
       />
       <div>
