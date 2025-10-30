@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import ProfileService, { ProfileAPI } from "../../api/profile/profile";
 import ConstituencyService from "../../api/constituency/constituency";
 
+
 interface Constituency {
   id: number;
   name: string;

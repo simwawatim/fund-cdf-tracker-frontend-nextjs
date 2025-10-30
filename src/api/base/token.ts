@@ -30,3 +30,9 @@ export function getAuthHeader(): { Authorization: string } | {} {
   const token = getTokenFromLocalStorage();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+
+export const clearAuthToken = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+};

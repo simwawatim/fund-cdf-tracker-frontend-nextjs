@@ -98,12 +98,8 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
                   <td className="py-2 px-4 flex items-center gap-2">
                     <img
                       src={item.avatar || "https://i.pravatar.cc/40?img=3"}
-                      // alt={item.user}
                       className="w-8 h-8 rounded-full object-cover border border-gray-300"
                     />
-                    {/* <span className="font-medium text-gray-900 text-sm">
-                      {item.user}
-                    </span> */}
                   </td>
 
                   <td className="py-2 px-4">
@@ -190,7 +186,6 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-4 text-sm text-gray-700">
           <button
@@ -223,7 +218,6 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
         </div>
       )}
 
-      {/* File Viewer */}
       {selectedFile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-4 rounded-lg max-w-3xl w-full relative">

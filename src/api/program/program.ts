@@ -1,6 +1,7 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
 import { getAuthHeader } from "../base/token";
+import { handleApiError } from "../base/errorHandler";
 
 export interface ProgramAPI {
   id: number;
@@ -10,7 +11,7 @@ export interface ProgramAPI {
 
 export interface ProgramSuccess {
   status: "success";
-  data: ProgramAPI | ProgramAPI[]; // Single or multiple
+  data: ProgramAPI | ProgramAPI[]; 
 }
 
 export interface ProgramError {
@@ -30,14 +31,14 @@ class ProgramService {
     }
 
     try {
-      const response = await axios.post<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1`,
-        { name, description },
-         { headers: getAuthHeader() }
+      const response = await axios.post(`${BASE_API_URL}api/programs/v1`, 
+        { name, description }, 
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to create program.");
+      const error = handleApiError(err, "Failed to create program.");
+      return { status: "error", message: error.message || "An error occurred" };
     }
   }
 
@@ -46,13 +47,13 @@ class ProgramService {
   // --------------------
   async getPrograms(): Promise<ProgramResponse> {
     try {
-      const response = await axios.get<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1`,
-         { headers: getAuthHeader() }
-      );
+      const response = await axios.get(`${BASE_API_URL}api/programs/v1`, {
+        headers: getAuthHeader(),
+      });
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to retrieve programs.");
+      const error = handleApiError(err, "Failed to retrieve programs.");
+      return { status: "error", message: error.message || "An error occurred" };
     }
   }
 
@@ -61,13 +62,13 @@ class ProgramService {
   // --------------------
   async getProgramById(id: number): Promise<ProgramResponse> {
     try {
-      const response = await axios.get<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1/${id}`,
-         { headers: getAuthHeader() }
-      );
+      const response = await axios.get(`${BASE_API_URL}api/programs/v1/${id}`, {
+        headers: getAuthHeader(),
+      });
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to retrieve program.");
+      const error = handleApiError(err, "Failed to retrieve program.");
+      return { status: "error", message: error.message || "An error occurred" };
     }
   }
 
@@ -75,19 +76,17 @@ class ProgramService {
   // Update a program
   // --------------------
   async updateProgram(id: number, name: string, description: string): Promise<ProgramResponse> {
-    if (!id) {
-      return { status: "error", message: "Program ID is required" };
-    }
+    if (!id) return { status: "error", message: "Program ID is required" };
 
     try {
-      const response = await axios.put<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1/${id}`,
-        { name, description },
-         { headers: getAuthHeader() }
+      const response = await axios.put(`${BASE_API_URL}api/programs/v1/${id}`, 
+        { name, description }, 
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to update program.");
+      const error = handleApiError(err, "Failed to update program.");
+      return { status: "error", message: error.message || "An error occurred" };
     }
   }
 
@@ -95,39 +94,17 @@ class ProgramService {
   // Delete a program
   // --------------------
   async deleteProgram(id: number): Promise<ProgramResponse> {
-    if (!id) {
-      return { status: "error", message: "Program ID is required" };
-    }
+    if (!id) return { status: "error", message: "Program ID is required" };
 
     try {
-      const response = await axios.delete<ProgramSuccess>(
-        `${BASE_API_URL}api/programs/v1/${id}`,
-         { headers: getAuthHeader() }
-      );
-      return {
-        status: "success",
-        data: { id, name: "", description: "" } // Just returning placeholder info
-      };
+      const response = await axios.delete(`${BASE_API_URL}api/programs/v1/${id}`, {
+        headers: getAuthHeader(),
+      });
+      return { status: "success", data: response.data }; 
     } catch (err: any) {
-      return this.handleError(err, "Failed to delete program.");
+      const error = handleApiError(err, "Failed to delete program.");
+      return { status: "error", message: error.message || "An error occurred" };
     }
-  }
-
-  // --------------------
-  // Helper: Handle API errors
-  // --------------------
-  private handleError(err: any, defaultMsg: string): ProgramError {
-    let errorMessage = defaultMsg;
-    if (err.response?.data?.message) {
-      const msg = err.response.data.message;
-      if (typeof msg === "string") errorMessage = msg;
-      else if (typeof msg === "object") {
-        errorMessage = Object.entries(msg)
-          .map(([field, errors]) => `${field}: ${(errors as string[]).join(", ")}`)
-          .join(" | ");
-      }
-    }
-    return { status: "error", message: errorMessage };
   }
 }
 

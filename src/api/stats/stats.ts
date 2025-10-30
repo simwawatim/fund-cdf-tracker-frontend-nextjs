@@ -1,6 +1,7 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
 import { getAuthHeader } from "../base/token"; 
+import { handleApiError, APIResponse } from "../../api/base/errorHandler";
 
 export interface Stats {
   total_users: number;
