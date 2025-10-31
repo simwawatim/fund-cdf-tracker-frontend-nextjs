@@ -1,27 +1,29 @@
+import { useState } from "react";
 import HeaderComp from "../header/Header";
 import Sidebar from "../sidebars/SideBar";
 import ProjectViewTable from "./Table";
 
 const ProjectViewPage = () => {
-    return (
-        <div className="flex flex-col h-screen">
-            {/* Top Header */}
-            <HeaderComp />
+  const [isOpen, setIsOpen] = useState(false);
+  const toggleSidebar = () => setIsOpen(!isOpen);
 
-            {/* Main content area: sidebar + content */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar */}
-                <aside className="w-64 overflow-y-auto">
-                    <Sidebar />
-                </aside>
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <HeaderComp isOpen={isOpen} toggleSidebar={toggleSidebar} />
 
-                {/* Main Content */}
-                <main className="flex-1 p-6 overflow-y-auto">
-                    <ProjectViewTable/>
-                </main>
-            </div>
-        </div>
-    );
-}
+      {/* Main content area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
+
+        {/* Main Content */}
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-white lg:ml-[250px]">
+          <ProjectViewTable />
+        </main>
+      </div>
+    </div>
+  );
+};
 
 export default ProjectViewPage;

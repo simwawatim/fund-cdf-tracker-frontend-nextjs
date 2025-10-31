@@ -4,27 +4,24 @@ import Sidebar from "@/components/sidebars/SideBar";
 
 const ConstituencyPage = () => {
   return (
-    <>
-
     <div className="flex flex-col h-screen">
-            {/* Top Header */}
-            <HeaderPage />
+      {/* Header */}
+      <HeaderPage />
 
-            {/* Main content area: sidebar + content */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar */}
-                <aside className="w-64 overflow-y-auto">
-                    <Sidebar />
-                </aside>
+      {/* Main content area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar (hidden on mobile) */}
+        <aside className="hidden md:block md:w-64 overflow-y-auto bg-gray-50 border-r">
+          <Sidebar />
+        </aside>
 
-                {/* Main Content */}
-                <main className="flex-1 p-6 overflow-y-auto">
-                    < ConstituencyTable/>
-                </main>
-            </div>
-        </div>
-    </>
-  )
-}
+        {/* Main Content */}
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-white">
+          <ConstituencyTable />
+        </main>
+      </div>
+    </div>
+  );
+};
 
 export default ConstituencyPage;
