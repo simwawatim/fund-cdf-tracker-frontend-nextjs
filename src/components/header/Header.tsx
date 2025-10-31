@@ -16,7 +16,7 @@ const HeaderComp = ({ isOpen, toggleSidebar }: HeaderProps) => {
   useEffect(() => {
     const fetchProfileImage = async () => {
       try {
-        const res = await ProfileService.getProfilePictureById(14);
+        const res = await ProfileService.getProfilePictureById(1);
         const profilePic =
           (res as any).data?.profile_picture ?? (res as any).profile_pic;
 
