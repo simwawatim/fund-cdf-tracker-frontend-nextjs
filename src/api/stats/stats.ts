@@ -1,5 +1,7 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token"; 
+import { handleApiError, APIResponse } from "../../api/base/errorHandler";
 
 export interface Stats {
   total_users: number;
@@ -18,6 +20,18 @@ export interface StatsError {
   status: "error";
   message: string;
 }
+
+export interface StatItem {
+  name: string;
+  Users: number;
+  Projects: number;
+}
+
+export interface StatsCardResponse {
+  status: string;
+  data: StatItem[];
+}
+
 
 export type StatsResponse = StatsSuccess | StatsError;
 
@@ -39,13 +53,33 @@ class StatsService {
   async getStats(): Promise<StatsResponse> {
     try {
       const response = await axios.get<StatsSuccess>(
-        `${BASE_API_URL}api/dashboard-summary/`
+        `${BASE_API_URL}api/dashboard-summary/`,
+         {
+          headers: getAuthHeader(),
+        }
       );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, "Failed to get stats");
     }
   }
+
+
+    async getStatsGraph(): Promise<StatsCardResponse> {
+    try {
+      const response = await axios.get<StatsCardResponse>(
+        `${BASE_API_URL}api/stats/`,
+        {
+          headers: getAuthHeader(),
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching stats:", error);
+      throw error;
+    }
+  }
 }
+
 
 export default new StatsService();

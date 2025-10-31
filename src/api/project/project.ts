@@ -1,5 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
 
 export interface ProjectAPI {
   id: string | number;
@@ -23,6 +24,15 @@ export interface ProjectAPI {
   updated_at: string;
   is_active: boolean;
 }
+
+
+export interface ProjectUpdateSupportingDocumentPayload  {
+  project_id: number;
+  title: string;
+  doc_type: string;
+  file_url: string;
+  uploaded_by: number;
+} 
 
 export interface ProjectUpdateProgress {
   id: number;
@@ -50,12 +60,14 @@ export interface ProjectError {
 export type ProjectResponse = ProjectSuccess | ProjectError;
 
 export interface ProjectUpdateAPI {
-  project: number; 
-  update_type: "progress" | "status" | string;
+  project: number;
+  status: "progress" | "status" | string;
   progress_percentage?: number;
   remarks?: string;
+  file?: File | null;
   updated_by: number;
 }
+
 
 export interface ProjectUpdateResponse {
   status: "success" | "error";
@@ -118,7 +130,9 @@ class ProjectService {
 
   async getProjects(): Promise<ProjectResponse> {
     try {
-      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/`);
+      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/`,
+        {headers: getAuthHeader()}
+      );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, "Failed to get projects.");
@@ -128,39 +142,65 @@ class ProjectService {
   async getProjectById(id: number): Promise<ProjectResponse> {
     if (!id) return { status: "error", message: "Project ID is required." };
     try {
-      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/${id}/`);
+      const response = await axios.get<ProjectSuccess>(`${BASE_API_URL}api/projects/v1/${id}/`,
+           {headers: getAuthHeader()}
+      );
       return response.data;
     } catch (err: any) {
       return this.handleError(err, `Failed to get project with ID ${id}.`);
     }
   }
 
-  async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse> {
-    if (!data.project || !data.update_type || !data.updated_by) {
-      return { status: "error", message: "Project, update_type, and updated_by are required." };
-    }
+async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse> {
+  if (!data.project || !data.status || !data.updated_by) {
+    return { status: "error", message: "Project, status, and updated_by are required." };
+  }
 
-    try {
-      const response = await axios.post<ProjectUpdateResponse>(
+  try {
+    let response;
+    if (data.file) {
+      // Send multipart/form-data
+      const formData = new FormData();
+      formData.append("project", data.project.toString());
+      formData.append("status", data.status);
+      if (data.progress_percentage !== undefined)
+        formData.append("progress_percentage", data.progress_percentage.toString());
+      if (data.remarks) formData.append("remarks", data.remarks);
+      formData.append("updated_by", data.updated_by.toString());
+      formData.append("file", data.file);
+
+      response = await axios.post<ProjectUpdateResponse>(
+        `${BASE_API_URL}api/project-updates/v1/`,
+        formData,
+        { headers: { 
+                      "Content-Type": "multipart/form-data",
+                      ...getAuthHeader() } }
+      );
+    } else {
+      // Send JSON if no file
+      response = await axios.post<ProjectUpdateResponse>(
         `${BASE_API_URL}api/project-updates/v1/`,
         data,
         { headers: { "Content-Type": "application/json" } }
       );
-      return response.data;
-    } catch (err: any) {
-      return {
-        status: "error",
-        message: `Failed to create project update: ${err.message || err}`,
-      };
     }
+
+    return response.data;
+  } catch (err: any) {
+    return {
+      status: "error",
+      message: err.response?.data?.message || err.message || "Failed to create project update.",
+    };
   }
+}
 
 
   async getProjectUpdateBasedOnProjectId(projectId: number): Promise<ProjectUpdateResponse> {
     if (!projectId) return { status: "error", message: "Project ID is required." };
     try {
       const response = await axios.get<ProjectUpdateResponse>(
-        `${BASE_API_URL}api/project-updates/v1/${projectId}/`
+        `${BASE_API_URL}api/project-updates/v1/${projectId}/`,
+        {headers: getAuthHeader()}
       );
       return response.data;
     } catch (err: any) {
@@ -170,6 +210,47 @@ class ProjectService {
       };
     }
   }
+
+  async createProjectUpdateSupportingDocumentFile(file: File, project_id: number, uploaded_by: number , project_update_id: number): Promise<ProjectUpdateResponse> {
+    const formData = new FormData();
+    formData.append("project", project_id.toString());
+    formData.append("title", `Update Document - ${new Date().toISOString()}`);
+    formData.append("doc_type", "report");
+    formData.append("uploaded_by", uploaded_by.toString());
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post<ProjectUpdateResponse>(
+        `${BASE_API_URL}/api/project-documents/v1/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      return response.data;
+    } catch (err: any) {
+      return {
+        status: "error",
+        message: err.response?.data?.message || err.message || "Failed to upload file",
+      };
+    }
+  }
+
+  async getProjectUpdateSupportingDocuments(projectId: number): Promise<ProjectUpdateResponse> {
+    if (!projectId) return { status: "error", message: "Project ID is required." };
+    try {
+      const response = await axios.get<ProjectUpdateResponse>(
+        `${BASE_API_URL}api/projects/${projectId}/documents/`
+      );
+      return response.data;
+    } catch (err: any) {
+      return {
+        status: "error",
+        message: `Failed to get supporting documents for project ID ${projectId}: ${err.message || err}`,
+      };
+    }
+  }
+
 
 }
 

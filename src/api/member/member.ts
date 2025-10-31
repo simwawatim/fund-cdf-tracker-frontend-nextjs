@@ -1,5 +1,7 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
+import { handleApiError, APIResponse } from "../../api/base/errorHandler";
 
 export interface CreateMemberPayload {
   user: {
@@ -12,22 +14,9 @@ export interface CreateMemberPayload {
   phone: string;
   constituency: number | null;
 }
-export interface UserProfileAPI {
-  id: number;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-  };
-  role: string;
-  phone: string;
-  constituency: number | null;
-  image?: string;
-}
 
 export interface MemberAPI {
+  profile_picture: string;
   id: number;
   user: {
     id: number;
@@ -44,102 +33,91 @@ export interface MemberAPI {
   updated_at?: string;
 }
 
-export interface MemberResponse {
-  status: "success" | "error";
+export interface MemberResponse extends APIResponse {
   data?: MemberAPI;
-  message?: string | Record<string, string[]>;
 }
 
 class MemberService {
-  // Create a member
   async createMember(payload: CreateMemberPayload): Promise<MemberResponse> {
     try {
       const response = await axios.post<MemberResponse>(
         `${BASE_API_URL}/api/users/v1/`,
-        payload
+        payload,
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to create user");
+      return handleApiError(err, "Failed to create user");
     }
   }
 
-  // Get all members
   async getMembers(): Promise<MemberAPI[]> {
     try {
-      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/`);
+      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/`, {
+        headers: getAuthHeader(),
+      });
       if (response.data.status === "success" && response.data.data) {
-        return Array.isArray(response.data.data) ? response.data.data : [response.data.data];
-      } else {
-        console.error("Unexpected response format", response.data);
-        return [];
+        return Array.isArray(response.data.data)
+          ? response.data.data
+          : [response.data.data];
       }
-    } catch (err) {
-      console.error("Error fetching members:", err);
+      return [];
+    } catch (err: any) {
+      handleApiError(err, "Failed to fetch members");
       return [];
     }
   }
 
-  // Get member by ID
   async getMemberById(id: number): Promise<MemberResponse> {
     try {
-      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/${id}/`);
+      const response = await axios.get<MemberResponse>(
+        `${BASE_API_URL}/api/users/v1/${id}/`,
+        { headers: getAuthHeader() }
+      );
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to fetch user");
+      return handleApiError(err, "Failed to fetch user");
     }
   }
 
-  // Get currently logged-in member
   async getCurrentMember(): Promise<MemberResponse> {
     try {
-      const response = await axios.get<MemberResponse>(`${BASE_API_URL}/api/users/v1/current/`);
+      const response = await axios.get<MemberResponse>(
+        `${BASE_API_URL}/api/users/v1/current/`,
+        { headers: getAuthHeader() }
+      );
       if (response.data.status === "success" && response.data.data) {
         return response.data;
-      } else {
-        return { status: "error", message: "No current user found" };
       }
+      return { status: "error", message: "No current user found" };
     } catch (err: any) {
-      return this.handleError(err, "Failed to fetch current user");
+      return handleApiError(err, "Failed to fetch current user");
     }
   }
 
-  // Update member
   async updateMember(id: number, payload: Partial<CreateMemberPayload>): Promise<MemberResponse> {
     try {
       const response = await axios.put<MemberResponse>(
         `${BASE_API_URL}/api/users/v1/${id}/`,
-        payload
+        payload,
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to update user");
+      return handleApiError(err, "Failed to update user");
     }
   }
 
-  // Delete member
   async deleteMember(id: number): Promise<MemberResponse> {
     try {
-      const response = await axios.delete<MemberResponse>(`${BASE_API_URL}/api/users/v1/${id}/`);
+      const response = await axios.delete<MemberResponse>(
+        `${BASE_API_URL}/api/users/v1/${id}/`,
+        { headers: getAuthHeader() }
+      );
       return response.data;
     } catch (err: any) {
-      return this.handleError(err, "Failed to delete user");
+      return handleApiError(err, "Failed to delete user");
     }
-  }
-
-  // Helper to handle errors
-  private handleError(err: any, defaultMsg: string): MemberResponse {
-    let errorMessage = defaultMsg;
-    const msg = err.response?.data?.message;
-    if (msg) {
-      if (typeof msg === "string") errorMessage = msg;
-      else if (typeof msg === "object") {
-        errorMessage = Object.entries(msg)
-          .map(([field, errors]) => `${field}: ${(errors as string[]).join(", ")}`)
-          .join(" | ");
-      }
-    }
-    return { status: "error", message: errorMessage };
   }
 }
 

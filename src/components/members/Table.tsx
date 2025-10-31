@@ -30,12 +30,9 @@ const MembersTable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const itemsPerPage = 10;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentMembers = members.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(members.length / itemsPerPage);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -53,6 +50,7 @@ const MembersTable = () => {
     { value: "viewer", label: "Viewer" },
   ];
 
+  // Fetch constituencies
   const handleGetConstituencies = async () => {
     try {
       const response = await ConstituencyService.getConstituencies();
@@ -63,6 +61,7 @@ const MembersTable = () => {
     }
   };
 
+  // Fetch members
   const fetchMembers = async () => {
     try {
       const data = await MemberService.getMembers();
@@ -88,6 +87,7 @@ const MembersTable = () => {
     fetchMembers();
   }, []);
 
+  // Open modals
   const openAddModal = () => {
     setEditingMember(null);
     setFormData({
@@ -108,6 +108,7 @@ const MembersTable = () => {
     setIsModalOpen(true);
   };
 
+  // Delete member
   const handleDelete = async (member: Member) => {
     if (!member.id) return;
 
@@ -136,6 +137,7 @@ const MembersTable = () => {
     }
   };
 
+  // Form submit
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -184,12 +186,7 @@ const MembersTable = () => {
           Swal.fire("Success", "Member updated successfully!", "success");
           setMembers(
             members.map((m) =>
-              m.id === editingMember.id
-                ? {
-                    ...formData,
-                    id: editingMember.id,
-                  }
-                : m
+              m.id === editingMember.id ? { ...formData, id: editingMember.id } : m
             )
           );
           setIsModalOpen(false);
@@ -206,16 +203,20 @@ const MembersTable = () => {
         const response = await MemberService.createMember(payload);
         if (response.status === "success") {
           Swal.fire("Success", "Member created successfully!", "success");
+          const created: any = response.data ?? {};
           setMembers([
             ...members,
             {
-              id: response.data.id,
-              firstName: response.data.first_name,
-              lastName: response.data.last_name,
-              email: response.data.email,
-              role: response.data.role,
-              phone: response.data.phone,
-              constituency: response.data.constituency ?? 0,
+              id: created.id ?? undefined,
+              firstName:
+                created.first_name ?? payload.user.first_name ?? formData.firstName,
+              lastName:
+                created.last_name ?? payload.user.last_name ?? formData.lastName,
+              email: created.email ?? payload.user.email ?? formData.email,
+              role: created.role ?? formData.role,
+              phone: created.phone ?? formData.phone,
+              constituency:
+                created.constituency ?? payload.constituency ?? formData.constituency ?? 0,
               image: "default-profile.png",
             },
           ]);
@@ -238,17 +239,42 @@ const MembersTable = () => {
     }
   };
 
+  // Search filter
+  const filteredMembers = members.filter((member) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      member.firstName.toLowerCase().includes(term) ||
+      member.lastName.toLowerCase().includes(term) ||
+      member.email.toLowerCase().includes(term) ||
+      member.role.toLowerCase().includes(term)
+    );
+  });
+
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentMembers = filteredMembers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-black">Members Table</h1>
 
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <button
           onClick={openAddModal}
           className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
         >
           Add User
         </button>
+
+        <input
+          type="text"
+          placeholder="Search by name, email, or role"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mblockt-2  rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+        />
       </div>
 
       <div className="overflow-x-auto">
@@ -282,8 +308,7 @@ const MembersTable = () => {
                 <td className="py-3 px-6 text-black">{member.email}</td>
                 <td className="py-3 px-6 text-black">{member.role}</td>
                 <td className="py-3 px-6 text-black">
-                  {constituencies.find((c) => c.id === member.constituency)?.name ||
-                    "N/A"}
+                  {constituencies.find((c) => c.id === member.constituency)?.name || "N/A"}
                 </td>
                 <td className="py-3 px-6 text-black">{member.phone}</td>
                 <td className="py-3 px-6 flex space-x-2">
@@ -302,6 +327,13 @@ const MembersTable = () => {
                 </td>
               </tr>
             ))}
+            {filteredMembers.length === 0 && (
+              <tr>
+                <td colSpan={9} className="text-center py-4 text-gray-500">
+                  No members found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -341,7 +373,7 @@ const MembersTable = () => {
               {editingMember ? "Edit Member" : "Add Member"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-              {["firstName", "lastName", "email","phone"].map((field) => (
+              {["firstName", "lastName", "email", "phone"].map((field) => (
                 <input
                   key={field}
                   type={field === "email" ? "email" : "text"}
@@ -357,23 +389,22 @@ const MembersTable = () => {
               ))}
 
               {/* Role Dropdown */}
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              required
-              disabled={isLoading}
-            >
-              <option value="" disabled>
-                Select Role
-              </option>
-              {USER_ROLES.map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                required
+                disabled={isLoading}
+              >
+                <option value="" disabled>
+                  Select Role
                 </option>
-              ))}
-            </select>
-
+                {USER_ROLES.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
 
               {/* Constituency Dropdown */}
               <select

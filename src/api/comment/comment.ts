@@ -85,18 +85,22 @@ class CommentService {
     }
   }
 
-  async deleteComment(id: number): Promise<CommentResponse> {
-    if (!id) return { status: "error", message: "Comment ID is required." };
-    try {
-      const response = await axios.delete<CommentResponse>(
-        `${BASE_API_URL}api/comments/${id}/`
-      );
-      return response.data;
-    } catch (err: any) {
-      return this.handleError(err, "Failed to delete comment.");
+async deleteComment(id: number): Promise<CommentResponse> {
+  if (!id) return { status: "error", message: "Comment ID is required." };
+
+  try {
+    const response = await axios.delete(`${BASE_API_URL}api/comments/${id}/`);
+    if (response.status === 204) {
+      return { status: "success", data: [] }; 
     }
+    return response.data as CommentResponse;
+  } catch (err: any) {
+    return this.handleError(err, "Failed to delete comment.");
   }
 }
+
+}
+
 
 export const CommentsAPI = new CommentService();
 

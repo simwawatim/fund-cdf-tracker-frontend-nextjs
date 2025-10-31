@@ -1,5 +1,7 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
+import { getAuthHeader } from "../base/token";
+import { handleApiError, APIResponse } from "../../api/base/errorHandler";
 
 export interface UserInfo {
   id: number;
@@ -17,6 +19,8 @@ export interface ProfileAPI {
   constituency: number | null;
   created_at: string;
   updated_at: string;
+  cover_picture: string | null;
+  profile_picture: string | null;
 }
 
 export interface ProfileSuccess {
@@ -34,54 +38,55 @@ export type MemberResponse = ProfileSuccess | ProfileError;
 class ProfileService {
   async getProfileById(id: number): Promise<MemberResponse> {
     try {
-      const response = await axios.get(`${BASE_API_URL}/api/users/v1/${id}/`);
+      const response = await axios.get(`${BASE_API_URL}/api/users/v1/${id}/`, {
+        headers: getAuthHeader(),
+      });
+
       if (response.data?.status === "success") {
         return { status: "success", data: response.data.data as ProfileAPI };
       }
+
       return { status: "error", message: response.data?.message || "Failed to fetch profile" };
     } catch (err: any) {
-      console.error("Error fetching profile:", err);
-      return {
-        status: "error",
-        message: err.response?.data?.message || "Network or server error",
-      };
+      const error = handleApiError(err, "Unable to fetch profile.");
+      return { status: "error", message: error.message || "Unknown error occurred" };
     }
   }
 
   async updateProfile(id: number, data: Partial<ProfileAPI>): Promise<MemberResponse> {
     try {
-      const response = await axios.patch(`${BASE_API_URL}/api/users/v1/${id}/`, data);
+      const response = await axios.patch(
+        `${BASE_API_URL}/api/users/update-profile/v1/${id}/`,
+        data,
+        { headers: getAuthHeader() }
+      );
+
       if (response.data?.status === "success") {
         return { status: "success", data: response.data.data as ProfileAPI };
       }
+
       return { status: "error", message: response.data?.message || "Failed to update profile" };
     } catch (err: any) {
-      console.error("Error updating profile:", err);
-
-      let message = "Something went wrong while updating your profile.";
-
-      if (err.response) {
-        const { status, data } = err.response;
-        if (status === 400) {
-          message = "Please check your details — some fields may be invalid.";
-        } else if (status === 401) {
-          message = "You are not authorized. Please log in again.";
-        } else if (status === 404) {
-          message = "Profile not found.";
-        } else if (status >= 500) {
-          message = "The server encountered an issue. Please try again later.";
-        }
-
-        if (data?.message) {
-          message += `\nDetails: ${JSON.stringify(data.message)}`;
-        }
-      } else if (err.request) {
-        message = "No response from the server. Please check your network connection.";
-      }
-
-      return { status: "error", message };
+      const error = handleApiError(err, "Unable to update profile.");
+      return { status: "error", message: error.message || "Unknown error occurred" };
     }
   }
+
+  async getProfilePictureById(userId: number): Promise<{ status: "success"; profile_pic: string } | ProfileError> {
+    try {
+      const response = await axios.get(`${BASE_API_URL}api/user-profiles/picture/${userId}/`);
+
+      if (response.data?.status === "success") {
+        return { status: "success", profile_pic: response.data.profile_pic };
+      }
+
+      return { status: "error", message: response.data?.message || "Failed to fetch profile picture" };
+    } catch (err: any) {
+      const error = handleApiError(err, "Unable to fetch profile picture.");
+      return { status: "error", message: error.message || "Unknown error occurred" };
+    }
+  }
+
 }
 
 export default new ProfileService();

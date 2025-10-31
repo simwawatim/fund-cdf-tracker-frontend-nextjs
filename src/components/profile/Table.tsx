@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ProfileProject from "./ProfileProject";
+import Swal from "sweetalert2";
 import ProfileService, { ProfileAPI } from "../../api/profile/profile";
 import ConstituencyService from "../../api/constituency/constituency";
-import Swal from "sweetalert2";
+import BASE_API_URL from "@/api/base/base";
 
 interface Constituency {
   id: number;
@@ -14,9 +14,21 @@ interface Constituency {
 const TableProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileInfo, setProfileInfo] = useState<ProfileAPI | null>(null);
-  const [formData, setFormData] = useState<Partial<ProfileAPI>>({});
+  const [formData, setFormData] = useState<
+    Partial<Omit<ProfileAPI, "user">> & {
+      user?: Partial<ProfileAPI["user"]>;
+      profile_picture?: File | string | null;
+      cover_picture?: File | string | null;
+    }
+  >({});
   const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [previewProfile, setPreviewProfile] = useState<string | null>(null);
+  const [previewCover, setPreviewCover] = useState<string | null>(null);
+
   const userId = 12;
+  const profilerId = 14;
 
   const getMessage = (message: string | Record<string, string[]> | undefined) => {
     if (!message) return "Something went wrong";
@@ -26,6 +38,7 @@ const TableProfile = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setLoading(true);
       const result = await ProfileService.getProfileById(userId);
       if (result.status === "success") {
         setProfileInfo(result.data);
@@ -38,6 +51,7 @@ const TableProfile = () => {
           confirmButtonColor: "#d33",
         });
       }
+      setLoading(false);
     };
 
     const handleGetConstituencies = async () => {
@@ -46,7 +60,6 @@ const TableProfile = () => {
         setConstituencies(response);
       } catch (error) {
         console.error("Error fetching constituencies:", error);
-        Swal.fire("Error", "Failed to fetch constituencies", "error");
       }
     };
 
@@ -54,11 +67,17 @@ const TableProfile = () => {
     handleGetConstituencies();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value, files } = e.target as HTMLInputElement;
 
-    // Update nested "user" fields properly
-    if (["first_name", "last_name", "email"].includes(name)) {
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (name === "profile_picture") setPreviewProfile(URL.createObjectURL(file));
+      if (name === "cover_picture") setPreviewCover(URL.createObjectURL(file));
+      setFormData({ ...formData, [name]: file });
+    } else if (["first_name", "last_name", "email"].includes(name)) {
       setFormData({
         ...formData,
         user: { ...formData.user, [name]: value },
@@ -70,190 +89,238 @@ const TableProfile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("📤 Sending data:", JSON.stringify(formData, null, 2));
+    Swal.fire({
+      title: "Updating Profile...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
 
-    const result = await ProfileService.updateProfile(userId, formData);
+    const payload = new FormData();
+
+    if (formData.user) {
+      payload.append("first_name", formData.user.first_name || "");
+      payload.append("last_name", formData.user.last_name || "");
+      payload.append("email", formData.user.email || "");
+    }
+
+    if (formData.phone) payload.append("phone", formData.phone);
+    if (formData.constituency) payload.append("constituency", formData.constituency.toString());
+
+    // type guard to allow safe narrowing to File for instanceof checks
+    const isFile = (v: unknown): v is File => v instanceof File;
+
+    if (isFile(formData.profile_picture)) {
+      payload.append("profile_picture", formData.profile_picture);
+    }
+
+    if (isFile(formData.cover_picture)) {
+      payload.append("cover_picture", formData.cover_picture);
+    }
+
+    const result = await ProfileService.updateProfile(profilerId, payload as any); // your service can accept FormData
+    Swal.close();
+
     if (result.status === "success") {
       setProfileInfo(result.data);
       setIsModalOpen(false);
-
+      setPreviewProfile(null);
+      setPreviewCover(null);
       Swal.fire({
-        title: "Profile Updated!",
-        text: "Your profile has been successfully updated.",
+        title: "Success!",
+        text: "Profile updated successfully.",
         icon: "success",
-        confirmButtonColor: "#3085d6",
-        timer: 2000,
+        timer: 1500,
         showConfirmButton: false,
       });
     } else {
       Swal.fire({
         title: "Update Failed",
-        text:
-          typeof result.message === "string"
-            ? result.message
-            : getMessage(result.message),
+        text: getMessage(result.message),
         icon: "error",
-        confirmButtonColor: "#d33",
       });
     }
   };
 
-  const stats = [
-    { title: "Total Projects", value: 48, change: "+12%", positive: true },
-    { title: "Completed Projects", value: 30, change: "+8%", positive: true },
-    { title: "Ongoing Projects", value: 12, change: "-5%", positive: false },
-    { title: "Total Budget Allocated", value: "K25,000,000", change: "+20%", positive: true },
-  ];
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen text-lg text-gray-600">
+        Loading profile...
+      </div>
+    );
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row gap-8 p-6">
-        {/* Profile Card */}
-        <div className="w-full lg:w-1/3">
-          <div className="bg-gray-200 shadow-lg rounded-2xl p-6 border flex flex-col justify-between h-full">
-            <div>
-              <h2 className="text-2xl font-semibold mb-5 text-black">Profile Overview</h2>
+      <div className="w-full min-h-screen bg-gray-100 flex flex-col items-center py-10">
+        <div className="w-full max-w-4xl bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
+          {/* Cover */}
+          <div className="relative w-full h-60 md:h-72 bg-gray-200">
+            <img
+              src={
+                profileInfo?.cover_picture
+                  ? `${BASE_API_URL}${profileInfo.cover_picture}`
+                  : "http://127.0.0.1:8000/media/profiles/default_cover.jpg"
+              }
+              alt="Cover"
+              className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
+            />
 
-              <div className="flex flex-col items-center mb-6">
+            {/* Profile Picture */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 bottom-[-70px]">
+              <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-full overflow-hidden border-[5px] border-white shadow-2xl bg-white hover:scale-105 transition-transform duration-300">
                 <img
-                  src="/default-profile.png"
+                  src={
+                    profileInfo?.profile_picture
+                      ? `${BASE_API_URL}${profileInfo.profile_picture}`
+                      : "http://127.0.0.1:8000/media/profiles/default_profile.jpg"
+                  }
                   alt="Profile"
-                  className="w-28 h-28 rounded-full border-4 border-green-700 shadow-md mb-4"
+                  className="w-full h-full object-cover object-center rounded-full"
+                  style={{ imageRendering: "auto" }}
                 />
-                <h3 className="text-lg font-semibold text-black">
-                  {profileInfo ? `${profileInfo.user.first_name} ${profileInfo.user.last_name}` : "Loading..."}
-                </h3>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {profileInfo?.role || "User"}
-                </span>
               </div>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-black">Email</h4>
-                    <p className="text-sm text-gray-700">{profileInfo?.user.email || "N/A"}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-black">Constituency</h4>
-                    <p className="text-sm text-gray-700">
-                      {constituencies.find((c) => c.id === profileInfo?.constituency)?.name || "N/A"}
-                    </p>
-                  </div>
-                </div>
+          {/* Profile Details */}
+          <div className="text-center px-6 pb-10 mt-20">
+            <h3 className="text-2xl md:text-3xl font-semibold text-gray-800">
+              {profileInfo
+                ? `${profileInfo.user.first_name} ${profileInfo.user.last_name}`
+                : "Loading..."}
+            </h3>
+            <span className="text-sm text-gray-500">{profileInfo?.role || "User"}</span>
 
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-black">Phone</h4>
-                    <p className="text-sm text-gray-700">{profileInfo?.phone || "N/A"}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-black">Role</h4>
-                    <p className="text-sm text-gray-700">{profileInfo?.role || "N/A"}</p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-gray-700 mt-8">
+              <div>
+                <h4 className="font-medium">Email</h4>
+                <p className="text-sm">{profileInfo?.user.email || "N/A"}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">Phone</h4>
+                <p className="text-sm">{profileInfo?.phone || "N/A"}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">Constituency</h4>
+                <p className="text-sm">
+                  {constituencies.find((c) => c.id === profileInfo?.constituency)?.name || "N/A"}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium">Role</h4>
+                <p className="text-sm">{profileInfo?.role || "N/A"}</p>
               </div>
             </div>
 
             <button
-              type="button"
               onClick={() => setIsModalOpen(true)}
-              className="mt-6 mx-auto block rounded-md bg-green-700 hover:bg-green-800 px-4 py-2 text-sm font-medium text-white shadow focus:ring-4 focus:ring-green-300 dark:focus:ring-green-600 transition-all duration-200"
+              className="mt-6 px-6 py-2 rounded-full text-sm font-medium text-white bg-green-700 hover:bg-green-800 shadow-md hover:shadow-lg transition"
             >
               Edit Profile
             </button>
           </div>
         </div>
-
-        {/* CDF Stats */}
-        <div className="w-full lg:flex-1">
-          <div className="bg-gray-200 shadow-lg rounded-2xl p-6 border">
-            <h2 className="text-2xl font-semibold mb-6 text-black pb-2">CDF Statistics</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <h3 className="text-sm font-medium text-black mb-2">{item.title}</h3>
-                  <div className="flex items-center">
-                    <span className="text-2xl font-bold text-black">{item.value}</span>
-                    <span
-                      className={`ml-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
-                        item.positive
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                      }`}
-                    >
-                      {item.change}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
-
-      <ProfileProject />
 
       {/* Edit Modal */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50"
+          className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 relative overflow-y-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-semibold mb-4 text-black">Edit Profile</h3>
+            <h3 className="text-xl md:text-2xl font-semibold mb-4 text-gray-900">
+              Edit Profile
+            </h3>
             <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* Uploads */}
               <div>
-                <label className="block text-sm font-medium text-black mb-1">First Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Profile Picture
+                </label>
                 <input
-                  type="text"
-                  name="first_name"
-                  value={formData.user?.first_name || ""}
+                  type="file"
+                  name="profile_picture"
+                  accept="image/*"
                   onChange={handleChange}
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-sm text-gray-600"
                 />
+                {previewProfile && (
+                  <img
+                    src={previewProfile}
+                    alt="Preview"
+                    className="mt-2 w-32 h-32 rounded-full object-cover border-2 border-gray-300"
+                  />
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-black mb-1">Last Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cover Picture
+                </label>
                 <input
-                  type="text"
-                  name="last_name"
-                  value={formData.user?.last_name || ""}
+                  type="file"
+                  name="cover_picture"
+                  accept="image/*"
                   onChange={handleChange}
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-sm text-gray-600"
                 />
+                {previewCover && (
+                  <img
+                    src={previewCover}
+                    alt="Preview"
+                    className="mt-2 w-full h-32 md:h-40 object-cover rounded-xl border-2 border-gray-300"
+                  />
+                )}
               </div>
+
+              {/* Text Fields */}
+              {[
+                { label: "First Name", name: "first_name", value: formData.user?.first_name || "" },
+                { label: "Last Name", name: "last_name", value: formData.user?.last_name || "" },
+                { label: "Email", name: "email", value: formData.user?.email || "" },
+                { label: "Phone", name: "phone", value: formData.phone || "" },
+              ].map((field) => (
+                <div key={field.name}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.name === "email" ? "email" : "text"}
+                    name={field.name}
+                    value={field.value}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:outline-none"
+                  />
+                </div>
+              ))}
+
               <div>
-                <label className="block text-sm font-medium text-black mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.user?.email || ""}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Constituency
+                </label>
+                <select
+                  name="constituency"
+                  value={formData.constituency || ""}
                   onChange={handleChange}
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                />
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:outline-none"
+                >
+                  <option value="">Select Constituency</option>
+                  {constituencies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">Phone</label>
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone || ""}
-                  onChange={handleChange}
-                  className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-red-700"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-red-600 transition"
                 >
                   Cancel
                 </button>

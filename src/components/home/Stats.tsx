@@ -11,17 +11,24 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import StatsService, { StatItem } from "../../api/stats/stats";
 
 const HomeStats = () => {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<StatItem[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/stats/")
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.status === "success") setData(json.data);
-      })
-      .catch((err) => console.error(err));
+    const fetchStats = async () => {
+      try {
+        const json = await StatsService.getStatsGraph();
+        if (json.status === "success") {
+          setData(json.data);
+        }
+      } catch (err) {
+        console.error("Failed to load stats:", err);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   return (
@@ -51,14 +58,14 @@ const HomeStats = () => {
               <Line
                 type="monotone"
                 dataKey="Users"
-                stroke="#60a5fa" // Light blue
+                stroke="#60a5fa"
                 strokeWidth={3}
                 activeDot={{ r: 8, fill: "#3b82f6" }}
               />
               <Line
                 type="monotone"
                 dataKey="Projects"
-                stroke="#34d399" // Emerald green
+                stroke="#34d399"
                 strokeWidth={3}
                 activeDot={{ r: 8, fill: "#10b981" }}
               />
