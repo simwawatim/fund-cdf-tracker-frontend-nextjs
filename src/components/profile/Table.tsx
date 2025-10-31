@@ -27,8 +27,8 @@ const TableProfile = () => {
   const [previewProfile, setPreviewProfile] = useState<string | null>(null);
   const [previewCover, setPreviewCover] = useState<string | null>(null);
 
-  const userId = 12;
-  const profilerId = 14;
+  const userId = 1;
+  const profilerId = 1;
 
   const getMessage = (message: string | Record<string, string[]> | undefined) => {
     if (!message) return "Something went wrong";
