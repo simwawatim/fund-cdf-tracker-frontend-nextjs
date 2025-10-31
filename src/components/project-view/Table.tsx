@@ -379,9 +379,6 @@ const ProjectViewTable = () => {
               program={programName}
               budget="ZMW 5,000,000"
               beneficiaries={String(projectDetails.beneficiaries_count || "0")}
-              manager="John Doe"
-              source="CDF"
-              location="Lusaka"
               remarks={String(projectDetails.remarks)}
             />
           ) : (

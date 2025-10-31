@@ -4,9 +4,6 @@ interface ProjectDetailsProps {
   budget: string;
   program: string | number;
   beneficiaries: string | number;
-  manager: string;
-  source: string;
-  location: string;
   remarks: string | number;
 }
 
@@ -14,9 +11,6 @@ const ProjectDetails = ({
   budget,
   program,
   beneficiaries,
-  manager,
-  source,
-  location,
   remarks,
 }: ProjectDetailsProps) => (
   <div className="overflow-x-auto">
@@ -33,18 +27,6 @@ const ProjectDetails = ({
         <tr>
           <td className="py-2 px-4 font-medium text-gray-700">Beneficiaries</td>
           <td className="py-2 px-4 text-gray-900">{beneficiaries}</td>
-        </tr>
-        <tr>
-          <td className="py-2 px-4 font-medium text-gray-700">Project Manager</td>
-          <td className="py-2 px-4 text-gray-900">{manager}</td>
-        </tr>
-        <tr>
-          <td className="py-2 px-4 font-medium text-gray-700">Funding Source</td>
-          <td className="py-2 px-4 text-gray-900">{source}</td>
-        </tr>
-        <tr>
-          <td className="py-2 px-4 font-medium text-gray-700">Location</td>
-          <td className="py-2 px-4 text-gray-900">{location}</td>
         </tr>
         <tr>
           <td className="py-2 px-4 font-medium text-gray-700">Remarks</td>

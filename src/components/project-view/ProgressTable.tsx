@@ -68,7 +68,7 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
       await Promise.all(
         data.map(async (item) => {
           try {
-            const res = await ProfileService.getProfilePictureById(item.updated_by_id);
+            const res = await ProfileService.getProfilePictureById(14);
             newAvatars[item.updated_by_id] =
               res.status === "success" && res.profile_pic
                 ? res.profile_pic
