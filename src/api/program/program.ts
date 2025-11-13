@@ -1,6 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
-import { getAuthHeader } from "../base/token";
+import { getAuthHeader, getCurrentUserId } from "../base/token";
 import { handleApiError } from "../base/errorHandler";
 
 export interface ProgramAPI {
@@ -19,12 +19,17 @@ export interface ProgramError {
   message: string;
 }
 
+const userId = getCurrentUserId();
+
+if (userId !== null) {
+  console.log("Current User ID:", userId);
+} else {
+  console.log("No user is logged in or token is missing/invalid.");
+}
+
 export type ProgramResponse = ProgramSuccess | ProgramError;
 
 class ProgramService {
-  // --------------------
-  // Create a new program
-  // --------------------
   async createProgram(name: string, description: string): Promise<ProgramResponse> {
     if (!name || !description) {
       return { status: "error", message: "Name and description are required" };
@@ -42,9 +47,6 @@ class ProgramService {
     }
   }
 
-  // --------------------
-  // Get all programs
-  // --------------------
   async getPrograms(): Promise<ProgramResponse> {
     try {
       const response = await axios.get(`${BASE_API_URL}api/programs/v1`, {
@@ -57,9 +59,6 @@ class ProgramService {
     }
   }
 
-  // --------------------
-  // Get a single program
-  // --------------------
   async getProgramById(id: number): Promise<ProgramResponse> {
     try {
       const response = await axios.get(`${BASE_API_URL}api/programs/v1/${id}`, {
@@ -72,9 +71,7 @@ class ProgramService {
     }
   }
 
-  // --------------------
-  // Update a program
-  // --------------------
+
   async updateProgram(id: number, name: string, description: string): Promise<ProgramResponse> {
     if (!id) return { status: "error", message: "Program ID is required" };
 
@@ -90,9 +87,6 @@ class ProgramService {
     }
   }
 
-  // --------------------
-  // Delete a program
-  // --------------------
   async deleteProgram(id: number): Promise<ProgramResponse> {
     if (!id) return { status: "error", message: "Program ID is required" };
 

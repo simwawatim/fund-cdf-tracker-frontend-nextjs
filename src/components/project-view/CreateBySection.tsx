@@ -18,7 +18,6 @@ interface SidebarInfoProps {
 
 const CreatedByInfo = ({ creator }: SidebarInfoProps) => (
   <div className="bg-gray-100 shadow-md text-black rounded-2xl p-6 flex flex-col space-y-6 max-h-[600px] overflow-y-auto self-start">
-    {/* Created By */}
     <div>
       <p className="text-sm text-gray-600 flex items-center font-medium">
         <svg
@@ -44,7 +43,6 @@ const CreatedByInfo = ({ creator }: SidebarInfoProps) => (
       </div>
     </div>
 
-    {/* Contact Info */}
     <div>
       <p className="text-gray-900 font-semibold text-lg mb-3">
         Contact Info
@@ -57,7 +55,6 @@ const CreatedByInfo = ({ creator }: SidebarInfoProps) => (
       </p>
     </div>
 
-    {/* Constituency Info */}
     <div>
       <p className="text-gray-900 font-semibold">
         Constituency Info

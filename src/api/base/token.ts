@@ -37,3 +37,20 @@ export const clearAuthToken = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
 };
+
+export function getCurrentProfileId(): number | null {
+  const token = getTokenFromLocalStorage();
+  if (!token) return null;
+  const decoded = decodedToken(token);
+  return decoded ? decoded.profile_id : null;
+}
+
+export function getCurrentUserIdSafe(): number | null {
+  const token = getTokenFromLocalStorage();
+  if (!token) return null;
+
+  const decoded = decodedToken(token);
+  if (!decoded) return null;
+
+  return decoded.user_id; 
+}

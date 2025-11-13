@@ -3,6 +3,7 @@
 import { useState, ChangeEvent } from "react";
 import ProjectService, { ProjectUpdateAPI } from "../../api/project/project";
 import Swal from "sweetalert2";
+import { getCurrentUserIdSafe } from "@/api/base/token";
 
 interface ProjectHeaderProps {
   id: number;
@@ -46,10 +47,24 @@ const ProjectHeader = ({
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+    const selectedFile = e.target.files?.[0];
+
+    if (!selectedFile) return;
+    if (selectedFile.type !== "application/pdf") {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid File",
+        text: "Only PDF files are allowed.",
+      });
+      e.target.value = ""; 
+      return;
     }
+
+    setFile(selectedFile);
   };
+
+
+  
 
   const handleUpdate = async () => {
     if (isSubmitting) return;
@@ -75,13 +90,24 @@ const ProjectHeader = ({
       return;
     }
 
+        
+    const userId = getCurrentUserIdSafe();
+    
+    if (userId !== null) {
+      console.log("Current User ID:", userId);
+    } else {
+      console.log("No user is logged in or token is missing/invalid.");
+    }
+
+    if (userId === null) return;
+
     const data: ProjectUpdateAPI = {
       project: id,
       status: projectStatus,
       progress_percentage: progressPercentage,
       remarks,
       file,
-      updated_by: 1,
+      updated_by: userId,
     };
 
     try {
@@ -201,10 +227,12 @@ const ProjectHeader = ({
                 <label className="block text-sm font-medium mb-1 text-black">Attach File</label>
                 <input
                   type="file"
+                  accept="application/pdf"
                   onChange={handleFileChange}
                   disabled={isStatusLocked}
                   className="mt-2 block w-full text-gray-900"
                 />
+
                 {file && <p className="text-xs mt-1 text-gray-500">Selected file: {file.name}</p>}
               </div>
             </div>
@@ -235,3 +263,7 @@ const ProjectHeader = ({
 };
 
 export default ProjectHeader;
+function getCurrentUserId() {
+  throw new Error("Function not implemented.");
+}
+

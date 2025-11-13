@@ -1,6 +1,6 @@
 import axios from "axios";
 import BASE_API_URL from "../base/base";
-import { getAuthHeader } from "../base/token";
+import { getAuthHeader, getCurrentProfileId, getCurrentUserId } from "../base/token";
 
 export interface ProjectAPI {
   id: string | number;
@@ -74,6 +74,14 @@ export interface ProjectUpdateResponse {
   data?: any;
   message?: string;
 }
+const profileId = getCurrentProfileId();
+
+if (profileId !== null) {
+  console.log("Current Profile ID:", profileId);
+} else {
+  console.log("No profile ID available (user not logged in or token invalid).");
+}
+
 
 class ProjectService {
   private handleError(err: any, defaultMsg: string): ProjectError {
@@ -119,8 +127,9 @@ class ProjectService {
           end_date,
           beneficiaries_count,
           remarks,
-          created_by: 9,
-        }
+          created_by: profileId,
+        },
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {

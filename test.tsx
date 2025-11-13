@@ -1,271 +1,840 @@
 "use client";
 
-import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import Link from "next/link";
+
+import ConstituencyService from "../../api/constituency/constituency";
+import ProgramService, { ProgramAPI } from "../../api/program/program";
 import ProjectService, { ProjectAPI } from "../../api/project/project";
-import { CommentsAPI } from "../../api/comment/comment";
-import MemberService, { UserProfileAPI } from "../../api/member/member";
 
-const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
-const ProjectDetails = dynamic(() => import("./ProjectDetails"), { ssr: false });
-const ProgressTable = dynamic(() => import("./ProgressTable"), { ssr: false });
-const CreatedByInfo = dynamic(() => import("./CreateBySection"), { ssr: false });
-
-// Types
-interface ProgressUpdate {
+interface Project {
   id: number;
-  user: string;
-  avatar: string;
-  update_type: string;
-  progress_percentage: string | number;
+  name: string;
+  constituency: number;
+  program: number;
+  description: string;
+  allocated_budget: number;
+  status: string;
+  start_date: string;
+  end_date: string;
+  beneficiaries_count: number;
+  project_manager: string;
+  funding_source: string;
+  location: string;
   remarks: string;
-  date: string;
-  fileUrl: string;
+  created_by: number;
 }
 
-interface CommentAPI {
+interface Constituency {
   id: number;
-  project: number;
-  user: number;
-  user_name: string;
-  message: string;
-  parent: number | null;
-  created_at: string;
-  updated_at: string;
-  is_active: boolean;
+  name: string;
 }
 
-const ProjectViewTable = () => {
-  const router = useRouter();
-  const { id } = router.query;
+const ProjectsTable = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [programTypes, setProgramTypes] = useState<ProgramAPI[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [sectionIndex, setSectionIndex] = useState(0);
-  const [projectDetails, setProjectDetails] = useState<ProjectAPI | null>(null);
-  const [progressData, setProgressData] = useState<ProgressUpdate[]>([]);
-  const [comments, setComments] = useState<CommentAPI[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [createdBy, setCreatedBy] = useState<UserProfileAPI | null>(null);
+  const itemsPerPage = 10;
 
-  // Section loader animation
-  useEffect(() => {
-    if (sectionIndex < 5) {
-      const timer = setTimeout(() => setSectionIndex((prev) => prev + 1), 1000);
-      return () => clearTimeout(timer);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-700";
+      case "in_progress":
+      case "halfway":
+      case "almost_done":
+        return "bg-yellow-100 text-yellow-700";
+      case "planning":
+        return "bg-blue-100 text-blue-700";
+      case "on_hold":
+        return "bg-orange-100 text-orange-700";
+      case "cancelled":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
-  }, [sectionIndex]);
+  };
 
-  // Fetch project & creator
-  useEffect(() => {
-    if (!id) return;
+  const [formData, setFormData] = useState<Project>({
+    id: 0,
+    name: "",
+    constituency: 0,
+    program: 0,
+    description: "",
+    allocated_budget: 0,
+    status: "",
+    start_date: "",
+    end_date: "",
+    beneficiaries_count: 0,
+    project_manager: "",
+    funding_source: "",
+    location: "",
+    remarks: "",
+    created_by: 9,
+  });
 
-    const fetchProjectAndCreator = async () => {
-      try {
-        const response = await ProjectService.getProjectById(Number(id));
-        if (response.status === "success") {
-          const project = Array.isArray(response.data) ? response.data[0] : response.data;
-          setProjectDetails(project);
-
-          // Fetch current user if no creator defined
-          if (project.created_by) {
-            const memberResponse = await MemberService.getMemberById(Number(project.created_by));
-            if (memberResponse.status === "success" && memberResponse.data) {
-              setCreatedBy({
-                ...memberResponse.data,
-                image: memberResponse.data.image || "/default-profile.png",
-              });
-            }
-          } else {
-            const currentMember = await MemberService.getCurrentMember();
-            if (currentMember.status === "success" && currentMember.data) {
-              setCreatedBy({
-                ...currentMember.data,
-                image: currentMember.data.image || "/default-profile.png",
-              });
-            }
-          }
-        } else {
-          await Swal.fire("Error", response.message as string, "error");
-        }
-      } catch (err) {
-        console.error("Error fetching project:", err);
-        await Swal.fire("Error", "Failed to load project data", "error");
-      }
-    };
-
-    fetchProjectAndCreator();
-  }, [id]);
-
-  // Fetch project updates
-  useEffect(() => {
-    if (!id) return;
-    const fetchUpdates = async () => {
-      try {
-        const response = await ProjectService.getProjectUpdateBasedOnProjectId(Number(id));
-        if (response.status === "success" && Array.isArray(response.data)) {
-          setProgressData(response.data);
-        }
-      } catch (err) {
-        console.error("Error fetching project update:", err);
-        await Swal.fire("Error", "Failed to load project update data", "error");
-      }
-    };
-    fetchUpdates();
-  }, [id]);
-
-  // Fetch comments
-  useEffect(() => {
-    if (!id) return;
-    fetchComments(Number(id));
-  }, [id]);
-
-  const fetchComments = async (projectId: number) => {
-    setLoadingComments(true);
+  const handleGetConstituencies = async () => {
     try {
-      const response = await CommentsAPI.getComments(projectId);
+      const response = await ConstituencyService.getConstituencies();
+      setConstituencies(response);
+    } catch (error) {
+      console.error("Error fetching constituencies:", error);
+      Swal.fire("Error", "Failed to fetch constituencies", "error");
+    }
+  };
+
+  const handleGetPrograms = async () => {
+    try {
+      const response = await ProgramService.getPrograms();
       if (response.status === "success") {
-        const data = Array.isArray(response.data) ? response.data : [response.data];
-        setComments(
-          (data as CommentAPI[]).sort(
-            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          )
+        setProgramTypes(response.data as ProgramAPI[]);
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+    } catch (error) {
+      console.error("Error fetching programs:", error);
+      Swal.fire("Error", "Failed to fetch programs", "error");
+    }
+  };
+
+  const handleGetProjects = async () => {
+    try {
+      const response = await ProjectService.getProjects();
+      if (response.status === "success") {
+        setProjects(
+          Array.isArray(response.data)
+            ? (response.data as Project[])
+            : [response.data as Project]
         );
+      } else {
+        Swal.fire("Error", response.message, "error");
       }
-    } catch (err) {
-      console.error("Failed to fetch comments:", err);
-      await Swal.fire("Error", "Failed to load comments", "error");
-    } finally {
-      setLoadingComments(false);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      Swal.fire("Error", "Failed to fetch projects", "error");
     }
   };
 
-  const handleAddComment = async (message: string, parent: number | null = null) => {
-    if (!id || !message.trim()) return;
-    const storedUser = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
-    const userId = storedUser ? Number(storedUser) : 1;
+  useEffect(() => {
+    handleGetConstituencies();
+    handleGetPrograms();
+    handleGetProjects();
+  }, []);
 
+  const openAddModal = () => {
+    setEditingProject(null);
+    setFormData({
+      id: 0,
+      name: "",
+      constituency: 0,
+      program: 0,
+      description: "",
+      allocated_budget: 0,
+      status: "",
+      start_date: "",
+      end_date: "",
+      beneficiaries_count: 0,
+      project_manager: "",
+      funding_source: "",
+      location: "",
+      remarks: "",
+      created_by: 9,
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (project: Project) => {
+    setEditingProject(project);
+    setFormData({ ...project });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     try {
-      const response = await CommentsAPI.createComment(Number(id), userId, message, parent);
-      if (response.status === "success") {
-        await fetchComments(Number(id));
+      const staticCreator = 9;
+      if (editingProject) {
+        setProjects(
+          projects.map((p) => (p.id === editingProject.id ? formData : p))
+        );
+        Swal.fire("Success", "Project updated successfully!", "success");
+      } else {
+        setProjects([...projects, formData]);
+
+        const response = await ProjectService.createProject(
+          formData.name,
+          formData.description,
+          formData.constituency,
+          formData.program,
+          formData.allocated_budget,
+          formData.start_date,
+          formData.end_date,
+          formData.beneficiaries_count,
+          formData.remarks,
+          staticCreator
+        );
+
+        if (response.status === "success") {
+          Swal.fire("Success", "Project created successfully!", "success");
+        } else {
+          Swal.fire(
+            "Error",
+            response.message || "Something went wrong",
+            "error"
+          );
+        }
       }
-    } catch (err) {
-      console.error("Create comment failed:", err);
+      setIsModalOpen(false);
+    } catch (error: any) {
+      console.error("Error:", error);
+      Swal.fire("Error", error?.message || "Something went wrong", "error");
     }
   };
 
-  const handleEditComment = async (commentId: number, newMessage: string) => {
-    if (!commentId || !newMessage.trim()) return;
-    try {
-      const response = await CommentsAPI.updateComment(commentId, newMessage);
-      if (response.status === "success") await fetchComments(Number(id));
-    } catch (err) {
-      console.error("Update comment failed:", err);
-    }
-  };
+  // --- SEARCH FILTER ---
+  const filteredProjects = projects.filter((p) => {
+    const term = searchTerm.toLowerCase();
+    const constituencyName =
+      constituencies.find((c) => c.id === p.constituency)?.name || "";
+    return (
+      p.name.toLowerCase().includes(term) ||
+      p.status.toLowerCase().includes(term) ||
+      constituencyName.toLowerCase().includes(term)
+    );
+  });
 
-  const handleDeleteComment = async (commentId: number) => {
-    if (!commentId) return;
-    try {
-      const response = await CommentsAPI.deleteComment(commentId);
-      if (response.status === "success") await fetchComments(Number(id));
-    } catch (err) {
-      console.error("Delete comment failed:", err);
-    }
-  };
-
-  const getConstituencyName = () => {
-    if (!createdBy || !createdBy.constituency) return "N/A";
-    return `Constituency ${createdBy.constituency}`;
-  };
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProjects = filteredProjects.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
 
   return (
-    <>
-      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full items-start">
-        <div className="bg-gray-100 shadow-md rounded-2xl p-4 flex-1 flex flex-col space-y-4 max-h-[500px] overflow-y-auto">
-          {sectionIndex >= 1 && projectDetails && (
-            <ProjectHeader
-              id={Number(id)}
-              name={projectDetails.name}
-              period={`${projectDetails.start_date} – ${projectDetails.end_date}`}
-              status={projectDetails.status || "Unknown"}
-              initialProgress={projectDetails.completion_percentage || 0}
-            />
-          )}
-          {sectionIndex >= 2 && projectDetails && (
-            <div className="border-t pt-2">
-              <p className="text-gray-900 font-semibold text-lg mb-1">Description</p>
-              <p className="text-gray-700 text-sm">{projectDetails.description}</p>
-            </div>
-          )}
-          {sectionIndex >= 3 && projectDetails && (
-            <ProjectDetails
-              program={String(projectDetails.program)}
-              budget="ZMW 5,000,000"
-              beneficiaries={String(projectDetails.beneficiaries_count || "0")}
-              manager="John Doe"
-              source="CDF"
-              location="Lusaka"
-              remarks={String(projectDetails.remarks)}
-            />
-          )}
-        </div>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-3xl font-bold mb-6 text-black">Projects Table</h1>
 
-        <div className="flex-1 max-w-xs self-start">
-          {sectionIndex >= 4 && createdBy && (
-            <CreatedByInfo
-              creator={{
-                name: `${createdBy.user.first_name} ${createdBy.user.last_name}`,
-                avatar: createdBy.image || "/default-profile.png",
-                date: "Aug 18",
-                email: createdBy.user.email,
-                mobile: createdBy.phone,
-                constituency: { name: getConstituencyName(), role: createdBy.role },
-              }}
-            />
-          )}
-        </div>
+      <div className="mb-4 flex justify-between items-center">
+        <button
+          onClick={openAddModal}
+          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
+        >
+          Add Project
+        </button>
+
+        <input
+          type="text"
+          placeholder="Search by name, status, or constituency"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mblockt-2 rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+        />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        <div className="flex-1">
-          {sectionIndex >= 5 && <ProgressTable data={progressData} onViewFile={setSelectedFile} />}
-        </div>
-        <div className="flex-1">
-          {sectionIndex >= 5 && (
-            <CommentsSection
-              comments={comments}
-              loading={loadingComments}
-              onAdd={handleAddComment}
-              onEdit={handleEditComment}
-              onDelete={handleDeleteComment}
-            />
-          )}
-        </div>
-      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white rounded-lg shadow-md">
+          <thead className="bg-gray-200 text-gray-700">
+            <tr>
+              <th className="text-left py-3 px-6">No</th>
+              <th className="text-left py-3 px-6">Name</th>
+              <th className="text-left py-3 px-6">Constituency</th>
+              <th className="text-left py-3 px-6">Budget</th>
+              <th className="text-left py-3 px-6">Status</th>
+              <th className="text-left py-3 px-6">Start</th>
+              <th className="text-left py-3 px-6">End</th>
+              <th className="text-left py-3 px-6">Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentProjects.map((project, index) => (
+              <tr key={index} className="border-b hover:bg-gray-50">
+                <td className="py-3 text-black px-6">{project.id}</td>
+                <td className="py-3 text-black px-6">{project.name}</td>
+                <td className="py-3 text-black px-6">
+                  {
+                    constituencies.find((c) => c.id === project.constituency)
+                      ?.name || "Unknown"
+                  }
+                </td>
+                <td className="py-3 text-black px-6">
+                  {project.allocated_budget.toLocaleString()}
+                </td>
+                <td className="py-3 px-6">
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      project.status
+                    )}`}
+                  >
+                    {project.status.replace("_", " ").toUpperCase()}
+                  </span>
+                </td>
+                <td className="py-3 text-black px-6">{project.start_date}</td>
+                <td className="py-3 text-black px-6">{project.end_date}</td>
+                <td className="py-3 text-black px-6">
+                  <button
+                    onClick={() => openEditModal(project)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            ))}
 
-      {selectedFile && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-3xl p-4 relative">
-            <button
-              onClick={() => setSelectedFile(null)}
-              className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
-            >
-              ✕
-            </button>
-            <h3 className="text-lg text-black mb-3">File Preview</h3>
-            {selectedFile.endsWith(".pdf") ? (
-              <iframe src={selectedFile} className="w-full h-96 rounded-md border" title="PDF Preview" />
-            ) : (
-              <img src={selectedFile} alt="File Preview" className="w-full h-96 object-contain rounded-md" />
+            {filteredProjects.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center py-4 text-gray-500">
+                  No projects found.
+                </td>
+              </tr>
             )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center mt-4 space-x-2">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
+        >
+          Prev
+        </button>
+        {[...Array(totalPages)].map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i + 1)}
+            className={`px-3 py-1 rounded hover:bg-gray-300 ${
+              currentPage === i + 1 ? "bg-black text-white" : "bg-white text-black"
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+          <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
+            <h2 className="text-2xl font-bold mb-4">
+              {editingProject ? "Edit Project" : "Add Project"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Project Name */}
+              <div>
+                <label className="block text-sm font-medium">Project Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                />
+              </div>
+
+              {/* Constituency */}
+              <div>
+                <label className="block text-sm font-medium">Constituency</label>
+                <select
+                  value={formData.constituency}
+                  onChange={(e) =>
+                    setFormData({ ...formData, constituency: Number(e.target.value) })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                >
+                  <option value={0}>Select Constituency</option>
+                  {constituencies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Program */}
+              <div>
+                <label className="block text-sm font-medium">Program</label>
+                <select
+                  value={formData.program}
+                  onChange={(e) =>
+                    setFormData({ ...formData, program: Number(e.target.value) })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                >
+                  <option value={0}>Select Program</option>
+                  {programTypes.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Allocated Budget */}
+              <div>
+                <label className="block text-sm font-medium">Allocated Budget</label>
+                <input
+                  type="number"
+                  value={formData.allocated_budget}
+                  onChange={(e) =>
+                    setFormData({ ...formData, allocated_budget: Number(e.target.value) })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                />
+              </div>
+
+            
+
+              {/* Start and End Dates */}
+              <div className="flex space-x-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">Start Date</label>
+                  <input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, start_date: e.target.value })
+                    }
+                    className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">End Date</label>
+                  <input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, end_date: e.target.value })
+                    }
+                    className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Beneficiaries */}
+              <div>
+                <label className="block text-sm font-medium">Beneficiaries Count</label>
+                <input
+                  type="number"
+                  value={formData.beneficiaries_count}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      beneficiaries_count: Number(e.target.value),
+                    })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-sm font-medium">Remarks</label>
+                <textarea
+                  value={formData.remarks}
+                  onChange={(e) =>
+                    setFormData({ ...formData, remarks: e.target.value })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-900 text-white rounded hover:bg-black"
+                >
+                  {editingProject ? "Update" : "Create"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
-export default ProjectViewTable;
+export default ProjectsTable;
+
+
+
+
+
+"use client";
+
+import { useEffect, useState } from "react";
+import ConstituencyService from "../../api/constituency/constituency";
+import ProgramService, { ProgramAPI } from "../../api/program/program";
+import ProjectService, { ProjectAPI } from "../../api/project/project";
+import Swal from "sweetalert2";
+import Link from "next/link";
+
+interface Project {
+  id: number;
+  name: string;
+  constituency: number;
+  program: number;
+  description: string;
+  allocated_budget: number;
+  status: string;
+  start_date: string;
+  end_date: string;
+  beneficiaries_count: number;
+  project_manager: string;
+  funding_source: string;
+  location: string;
+  remarks: string;
+  created_by: number;
+}
+
+interface Constituency {
+  id: number;
+  name: string;
+}
+
+const ProjectsTable = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [programType, setProgramTypes] = useState<ProgramAPI[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const itemsPerPage = 10;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-700";
+      case "in_progress":
+      case "halfway":
+      case "almost_done":
+        return "bg-yellow-100 text-yellow-700";
+      case "planning":
+        return "bg-blue-100 text-blue-700";
+      case "on_hold":
+        return "bg-orange-100 text-orange-700";
+      case "cancelled":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const [formData, setFormData] = useState<Project>({
+    id: 0,
+    name: "",
+    constituency: 0,
+    program: 0,
+    description: "",
+    allocated_budget: 0,
+    status: "",
+    start_date: "",
+    end_date: "",
+    beneficiaries_count: 0,
+    project_manager: "",
+    funding_source: "",
+    location: "",
+    remarks: "",
+    created_by: 9,
+  });
+
+  const handleGetConstituencies = async () => {
+    try {
+      const response = await ConstituencyService.getConstituencies();
+      setConstituencies(response);
+    } catch (error) {
+      console.error("Error fetching constituencies:", error);
+      Swal.fire("Error", "Failed to fetch constituencies", "error");
+    }
+  };
+
+  const handleGetProjects = async () => {
+    const response = await ProjectService.getProjects();
+    if (response.status === "success") {
+      setProjects(
+        Array.isArray(response.data)
+          ? (response.data as Project[])
+          : [response.data as Project]
+      );
+    } else {
+      Swal.fire("Error", response.message, "error");
+    }
+  };
+
+  const handleGetPrograms = async () => {
+    try {
+      const response = await ProgramService.getPrograms();
+      if (response.status === "success") {
+        setProgramTypes(response.data as ProgramAPI[]);
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+    } catch (error) {
+      console.error("Error fetching programs:", error);
+      Swal.fire("Error", "Failed to fetch programs", "error");
+    }
+  };
+
+  useEffect(() => {
+    handleGetConstituencies();
+    handleGetPrograms();
+    handleGetProjects();
+  }, []);
+
+  const openAddModal = () => {
+    setEditingProject(null);
+    setFormData({
+      id: 0,
+      name: "",
+      constituency: 0,
+      program: 0,
+      description: "",
+      allocated_budget: 0,
+      status: "",
+      start_date: "",
+      end_date: "",
+      beneficiaries_count: 0,
+      project_manager: "",
+      funding_source: "",
+      location: "",
+      remarks: "",
+      created_by: 9,
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (project: Project) => {
+    setEditingProject(project);
+    setFormData({ ...project });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const staticCreator = 9;
+      if (editingProject) {
+        setProjects(
+          projects.map((p) => (p === editingProject ? formData : p))
+        );
+      } else {
+        setProjects([...projects, formData]);
+
+        const response = await ProjectService.createProject(
+          formData.name,
+          formData.description,
+          formData.constituency,
+          formData.program,
+          formData.allocated_budget,
+          formData.start_date,
+          formData.end_date,
+          formData.beneficiaries_count,
+          formData.remarks,
+          staticCreator
+        );
+
+        if (response.status === "success") {
+          Swal.fire("Success", "Project created successfully!", "success");
+        } else {
+          Swal.fire(
+            "Error",
+            response.message || "Something went wrong",
+            "error"
+          );
+        }
+      }
+      setIsModalOpen(false);
+    } catch (error: any) {
+      console.log("Error creating project:", error);
+      Swal.fire("Error", error?.message || "Something went wrong", "error");
+    }
+  };
+
+  // --- SEARCH FILTER ---
+  const filteredProjects = projects.filter((p) => {
+    const term = searchTerm.toLowerCase();
+    const constituencyName =
+      constituencies.find((c) => c.id === p.constituency)?.name || "";
+    return (
+      p.name.toLowerCase().includes(term) ||
+      p.status.toLowerCase().includes(term) ||
+      constituencyName.toLowerCase().includes(term)
+    );
+  });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProjects = filteredProjects.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+
+  return (
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-3xl font-bold mb-6 text-black">Projects Table</h1>
+
+      <div className="mb-4 flex justify-between items-center">
+        <button
+          onClick={openAddModal}
+          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
+        >
+          Add Project
+        </button>
+
+        <input
+          type="text"
+          placeholder="Search by name, status, or constituency"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mblockt-2  rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+        />
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white rounded-lg shadow-md">
+          <thead className="bg-gray-200 text-gray-700">
+            <tr>
+              <th className="text-left py-3 px-6">No</th>
+              <th className="text-left py-3 px-6">Name</th>
+              <th className="text-left py-3 px-6">Constituency</th>
+              <th className="text-left py-3 px-6">Budget</th>
+              <th className="text-left py-3 px-6">Status</th>
+              <th className="text-left py-3 px-6">Start</th>
+              <th className="text-left py-3 px-6">End</th>
+              <th className="text-left py-3 px-6">Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentProjects.map((project, index) => (
+              <tr key={index} className="border-b hover:bg-gray-50">
+                <td className="py-3 text-black px-6">{project.id}</td>
+                <td className="py-3 text-black px-6">{project.name}</td>
+                <td className="py-3 text-black px-6">
+                  {
+                    constituencies.find((c) => c.id === project.constituency)
+                      ?.name || "Unknown"
+                  }
+                </td>
+
+                <td className="py-3 text-black px-6">
+                  {project.allocated_budget.toLocaleString()}
+                </td>
+                <td className="py-3 px-6">
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      project.status
+                    )}`}
+                  >
+                    {project.status.replace("_", " ").toUpperCase()}
+                  </span>
+                </td>
+                <td className="py-3 text-black px-6">{project.start_date}</td>
+                <td className="py-3 text-black px-6">{project.end_date}</td>
+                <td className="py-3 text-black px-6">
+                  <Link
+                    href={`/project-view/${project.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    View
+                  </Link>
+                </td>
+              </tr>
+            ))}
+
+            {filteredProjects.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center py-4 text-gray-500">
+                  No projects found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center mt-4 space-x-2">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
+        >
+          Prev
+        </button>
+        {[...Array(totalPages)].map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i + 1)}
+            className={`px-3 py-1 rounded hover:bg-gray-300 ${
+              currentPage === i + 1 ? "bg-black text-white" : "bg-white text-black"
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+          <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
+            {/* ... Modal form stays same as your existing code ... */}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProjectsTable;

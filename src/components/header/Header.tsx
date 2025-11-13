@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProfileService from "../../api/profile/profile";
 import { FaBars, FaTimes } from "react-icons/fa";
+import { getCurrentUserId } from "@/api/base/token";
 
 interface HeaderProps {
   isOpen: boolean;
@@ -13,21 +14,27 @@ interface HeaderProps {
 const HeaderComp = ({ isOpen, toggleSidebar }: HeaderProps) => {
   const [profileImage, setProfileImage] = useState("/default-profile.png");
 
+  const userId = getCurrentUserId();
+
   useEffect(() => {
     const fetchProfileImage = async () => {
-      try {
-        const res = await ProfileService.getProfilePictureById(1);
-        const profilePic =
-          (res as any).data?.profile_picture ?? (res as any).profile_pic;
+      if (userId === null) return;
 
-        if (res.status === "success" && profilePic) setProfileImage(profilePic);
+      try {
+        const res = await ProfileService.getProfilePictureById(userId);
+
+        if (res.status === "success" && res.profile_pic) {
+          setProfileImage(res.profile_pic);
+        } else if (res.status === "error") {
+          console.error("Error fetching profile image:", res.message);
+        }
       } catch (error) {
         console.error("Failed to load profile image:", error);
       }
     };
 
     fetchProfileImage();
-  }, []);
+  }, [userId]);
 
   return (
     <header className="flex shadow-lg py-4 px-4 sm:px-10 bg-black text-white min-h-[70px] relative z-30">
@@ -57,7 +64,6 @@ const HeaderComp = ({ isOpen, toggleSidebar }: HeaderProps) => {
       {/* Desktop view */}
       <div className="hidden lg:flex items-center justify-between w-full lg:ml-[250px]">
         <Link href="/home" className="text-xl font-bold">
-          CDF System
         </Link>
 
         <Link href="/profile">
