@@ -25,16 +25,7 @@ const LoginComp = () => {
     try {
       const loginResponse: SuccessLoginResponse = await AuthService.login(email, password);
       localStorage.setItem("access_token", loginResponse.access);
-
-      Swal.fire({
-        title: "Success!",
-        text: "Login successful!",
-        icon: "success",
-        confirmButtonText: "OK",
-      }).then(() => {
-        // Redirect after successful login
-        router.push("/home");
-      });
+      router.push("/home");
 
     } catch (err) {
       const error = err as ErrorLoginResponse;
