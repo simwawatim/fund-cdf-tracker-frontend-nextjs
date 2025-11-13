@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import Link from "next/link";
+
 import ConstituencyService from "../../api/constituency/constituency";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
 import ProjectService, { ProjectAPI } from "../../api/project/project";
-import Swal from "sweetalert2";
-import Link from "next/link";
 
 interface Project {
   id: number;
@@ -33,7 +34,7 @@ interface Constituency {
 const ProjectsTable = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [constituencies, setConstituencies] = useState<Constituency[]>([]);
-  const [programType, setProgramTypes] = useState<ProgramAPI[]>([]);
+  const [programTypes, setProgramTypes] = useState<ProgramAPI[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -88,19 +89,6 @@ const ProjectsTable = () => {
     }
   };
 
-  const handleGetProjects = async () => {
-    const response = await ProjectService.getProjects();
-    if (response.status === "success") {
-      setProjects(
-        Array.isArray(response.data)
-          ? (response.data as Project[])
-          : [response.data as Project]
-      );
-    } else {
-      Swal.fire("Error", response.message, "error");
-    }
-  };
-
   const handleGetPrograms = async () => {
     try {
       const response = await ProgramService.getPrograms();
@@ -112,6 +100,24 @@ const ProjectsTable = () => {
     } catch (error) {
       console.error("Error fetching programs:", error);
       Swal.fire("Error", "Failed to fetch programs", "error");
+    }
+  };
+
+  const handleGetProjects = async () => {
+    try {
+      const response = await ProjectService.getProjects();
+      if (response.status === "success") {
+        setProjects(
+          Array.isArray(response.data)
+            ? (response.data as Project[])
+            : [response.data as Project]
+        );
+      } else {
+        Swal.fire("Error", response.message, "error");
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      Swal.fire("Error", "Failed to fetch projects", "error");
     }
   };
 
@@ -155,8 +161,9 @@ const ProjectsTable = () => {
       const staticCreator = 9;
       if (editingProject) {
         setProjects(
-          projects.map((p) => (p === editingProject ? formData : p))
+          projects.map((p) => (p.id === editingProject.id ? formData : p))
         );
+        Swal.fire("Success", "Project updated successfully!", "success");
       } else {
         setProjects([...projects, formData]);
 
@@ -185,7 +192,7 @@ const ProjectsTable = () => {
       }
       setIsModalOpen(false);
     } catch (error: any) {
-      console.log("Error creating project:", error);
+      console.error("Error:", error);
       Swal.fire("Error", error?.message || "Something went wrong", "error");
     }
   };
@@ -227,7 +234,7 @@ const ProjectsTable = () => {
           placeholder="Search by name, status, or constituency"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="mblockt-2  rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          className="mblockt-2 rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
         />
       </div>
 
@@ -256,7 +263,6 @@ const ProjectsTable = () => {
                       ?.name || "Unknown"
                   }
                 </td>
-
                 <td className="py-3 text-black px-6">
                   {project.allocated_budget.toLocaleString()}
                 </td>
@@ -271,7 +277,7 @@ const ProjectsTable = () => {
                 </td>
                 <td className="py-3 text-black px-6">{project.start_date}</td>
                 <td className="py-3 text-black px-6">{project.end_date}</td>
-                <td className="py-3 text-black px-6">
+                 <td className="py-3 text-black px-6">
                   <Link
                     href={`/project-view/${project.id}`}
                     className="text-blue-600 hover:underline"
@@ -323,8 +329,167 @@ const ProjectsTable = () => {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-          <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
-            {/* ... Modal form stays same as your existing code ... */}
+          <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-lg w-[700px] p-6 relative text-black overflow-y-auto max-h-[90vh]">
+            <h2 className="text-2xl font-bold mb-4">
+              {editingProject ? "Edit Project" : "Add Project"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Project Name */}
+              <div>
+                <label className="block text-sm font-medium">Project Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                />
+              </div>
+
+              {/* Constituency */}
+              <div>
+                <label className="block text-sm font-medium">Constituency</label>
+                <select
+                  value={formData.constituency}
+                  onChange={(e) =>
+                    setFormData({ ...formData, constituency: Number(e.target.value) })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                >
+                  <option value={0}>Select Constituency</option>
+                  {constituencies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Program */}
+              <div>
+                <label className="block text-sm font-medium">Program</label>
+                <select
+                  value={formData.program}
+                  onChange={(e) =>
+                    setFormData({ ...formData, program: Number(e.target.value) })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                >
+                  <option value={0}>Select Program</option>
+                  {programTypes.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Allocated Budget */}
+              <div>
+                <label className="block text-sm font-medium">Allocated Budget</label>
+                <input
+                  type="number"
+                  value={formData.allocated_budget}
+                  onChange={(e) =>
+                    setFormData({ ...formData, allocated_budget: Number(e.target.value) })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  required
+                />
+              </div>
+
+            
+
+              {/* Start and End Dates */}
+              <div className="flex space-x-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">Start Date</label>
+                  <input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, start_date: e.target.value })
+                    }
+                    className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">End Date</label>
+                  <input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, end_date: e.target.value })
+                    }
+                    className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Beneficiaries */}
+              <div>
+                <label className="block text-sm font-medium">Beneficiaries Count</label>
+                <input
+                  type="number"
+                  value={formData.beneficiaries_count}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      beneficiaries_count: Number(e.target.value),
+                    })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-sm font-medium">Remarks</label>
+                <textarea
+                  value={formData.remarks}
+                  onChange={(e) =>
+                    setFormData({ ...formData, remarks: e.target.value })
+                  }
+                  className="mblockt-2  w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-red-900 text-white rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-900 text-white rounded hover:bg-black"
+                >
+                  {editingProject ? "Update" : "Create"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -333,3 +498,5 @@ const ProjectsTable = () => {
 };
 
 export default ProjectsTable;
+
+

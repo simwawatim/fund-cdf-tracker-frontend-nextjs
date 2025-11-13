@@ -120,7 +120,8 @@ class ProjectService {
           beneficiaries_count,
           remarks,
           created_by: 9,
-        }
+        },
+        { headers: getAuthHeader() }
       );
       return response.data;
     } catch (err: any) {
