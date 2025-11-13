@@ -18,9 +18,6 @@ const CDFCategoriesTable = () => {
 
   const [formData, setFormData] = useState({ name: "", description: "" });
 
-  // ----------------------------
-  // Fetch all programs on mount
-  // ----------------------------
   useEffect(() => {
     const fetchPrograms = async () => {
       const response = await ProgramService.getPrograms();
@@ -33,9 +30,7 @@ const CDFCategoriesTable = () => {
     fetchPrograms();
   }, []);
 
-  // ----------------------------
-  // Modal openers
-  // ----------------------------
+
   const openAddModal = () => {
     setEditingCategory(null);
     setFormData({ name: "", description: "" });
@@ -48,14 +43,10 @@ const CDFCategoriesTable = () => {
     setIsModalOpen(true);
   };
 
-  // ----------------------------
-  // Handle form submission
-  // ----------------------------
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (editingCategory) {
-      // Update existing program
       const response = await ProgramService.updateProgram(
         editingCategory.id,
         formData.name,
@@ -72,7 +63,6 @@ const CDFCategoriesTable = () => {
         Swal.fire("Error", response.message, "error");
       }
     } else {
-      // Create new program
       const response = await ProgramService.createProgram(
         formData.name,
         formData.description
@@ -88,9 +78,6 @@ const CDFCategoriesTable = () => {
     setIsModalOpen(false);
   };
 
-  // ----------------------------
-  // Delete program
-  // ----------------------------
   const handleDelete = async (id: number) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",

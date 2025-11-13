@@ -19,8 +19,6 @@ const CommentsSection = ({ comments }: CommentsSectionProps) => {
   return (
     <div className="bg-gray-100 shadow text-black rounded-2xl p-4 flex flex-col h-[90vh]">
       <h2 className="text-base font-semibold mb-3 text-gray-800">Comments</h2>
-
-      {/* Comment list */}
       <div className="overflow-y-auto pr-2 flex-1">
         {comments.map((comment) => (
           <div
@@ -52,7 +50,6 @@ const CommentsSection = ({ comments }: CommentsSectionProps) => {
         ))}
       </div>
 
-      {/* New comment input */}
       <div className="mt-4 flex items-start gap-2">
         <img
           src="/your-avatar.png"

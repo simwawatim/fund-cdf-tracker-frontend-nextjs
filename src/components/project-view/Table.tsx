@@ -183,7 +183,7 @@ const ProjectViewTable = () => {
     return `Constituency ${createdBy.constituency}`;
   };
 
-  // Fetch project and creator
+
   useEffect(() => {
     if (!id) return;
 
@@ -223,7 +223,6 @@ const ProjectViewTable = () => {
     fetchProjectAndCreator();
   }, [id]);
 
-  // Fetch updates and map documents
   useEffect(() => {
     if (!id) return;
 
@@ -260,8 +259,6 @@ const ProjectViewTable = () => {
 
     fetchUpdatesAndDocs();
   }, [id]);
-
-  // Fetch comments
   useEffect(() => { if (!id) return; fetchComments(Number(id)); }, [id]);
 
   const fetchComments = async (projectId: number) => {
@@ -281,8 +278,6 @@ const ProjectViewTable = () => {
       setLoadingComments(false);
     }
   };
-
-  // Fetch programs
   useEffect(() => {
     const fetchPrograms = async () => {
       const response = await ProgramService.getPrograms();
@@ -403,9 +398,7 @@ const ProjectViewTable = () => {
         </div>
       </div>
 
-      {/* Bottom Section */}
       <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
-        {/* Progress Table: 8/12 */}
         <div className="w-full lg:w-8/12 overflow-x-auto">
           {sectionIndex >= 5 ? (
             <ProgressTable data={progressData as any} onViewFile={setSelectedFile} />
@@ -414,7 +407,6 @@ const ProjectViewTable = () => {
           )}
         </div>
 
-        {/* Comments Section: 4/12 */}
         <div className="w-full lg:w-4/12">
           {sectionIndex >= 5 ? (
             <CommentsSection

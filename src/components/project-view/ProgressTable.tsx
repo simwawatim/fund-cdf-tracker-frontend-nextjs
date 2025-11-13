@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Eye } from "lucide-react";
 import PDF_API_URL from "../../api/base/pdf";
 import ProfileService from "../../api/profile/profile";
+import { getCurrentProfileId } from "@/api/base/token";
 
 interface DocumentItem {
   id: number;
@@ -39,7 +40,6 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
   const startIndex = (currentPage - 1) * rowsPerPage;
   const currentData = data.slice(startIndex, startIndex + rowsPerPage);
 
-  // Format date helper
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "Invalid Date";
@@ -61,14 +61,15 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
     setSelectedFile(fileUrl);
   };
 
-  // Fetch all avatars once per `data` change
   useEffect(() => {
     const fetchAvatars = async () => {
+      const profileId = getCurrentProfileId();
+      if (profileId  === null) return;
       const newAvatars: Record<number, string> = {};
       await Promise.all(
         data.map(async (item) => {
           try {
-            const res = await ProfileService.getProfilePictureById(14);
+            const res = await ProfileService.getProfilePictureById(profileId);
             newAvatars[item.updated_by_id] =
               res.status === "success" && res.profile_pic
                 ? res.profile_pic

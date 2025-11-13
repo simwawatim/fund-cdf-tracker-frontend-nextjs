@@ -23,6 +23,7 @@ const HomeStats = () => {
         if (json.status === "success") {
           setData(json.data);
         }
+        
       } catch (err) {
         console.error("Failed to load stats:", err);
       }
