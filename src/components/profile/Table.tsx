@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import ProfileService, { ProfileAPI } from "../../api/profile/profile";
 import ConstituencyService from "../../api/constituency/constituency";
 import BASE_API_URL from "@/api/base/base";
+import { getCurrentProfileId, getCurrentUserId } from "@/api/base/token";
 
 interface Constituency {
   id: number;
@@ -27,8 +28,25 @@ const TableProfile = () => {
   const [previewProfile, setPreviewProfile] = useState<string | null>(null);
   const [previewCover, setPreviewCover] = useState<string | null>(null);
 
-  const userId = 1;
-  const profilerId = 1;
+
+
+  const userId = getCurrentUserId();
+  
+  if (userId !== null) {
+    console.log("Current User ID:", userId);
+  } else {
+    console.log("No user is logged in or token is missing/invalid.");
+  }
+
+
+  const profileId = getCurrentProfileId();
+  
+  if (profileId !== null) {
+    console.log("Current Profile ID:", profileId);
+  } else {
+    console.log("No profile ID available (user not logged in or token invalid).");
+  }
+
 
   const getMessage = (message: string | Record<string, string[]> | undefined) => {
     if (!message) return "Something went wrong";
@@ -38,8 +56,11 @@ const TableProfile = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+
+      if (profileId === null) return;
       setLoading(true);
-      const result = await ProfileService.getProfileById(userId);
+      const result = await ProfileService.getProfileById(profileId);
+
       if (result.status === "success") {
         setProfileInfo(result.data);
         setFormData(result.data);
@@ -88,6 +109,8 @@ const TableProfile = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+
+ 
     e.preventDefault();
     Swal.fire({
       title: "Updating Profile...",
@@ -117,7 +140,20 @@ const TableProfile = () => {
       payload.append("cover_picture", formData.cover_picture);
     }
 
-    const result = await ProfileService.updateProfile(profilerId, payload as any); // your service can accept FormData
+
+    const profileId = getCurrentProfileId();
+    
+    const userId = getCurrentUserId();
+  
+    if (userId !== null) {
+      console.log("Current User ID:", userId);
+    } else {
+      console.log("No user is logged in or token is missing/invalid.");
+    }
+
+    if (userId === null) return;
+
+    const result = await ProfileService.updateProfile(userId, payload as any); // your service can accept FormData
     Swal.close();
 
     if (result.status === "success") {
