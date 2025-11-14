@@ -107,7 +107,7 @@ const HeaderComp = ({ isOpen, toggleSidebar }: HeaderProps) => {
       {/* Desktop view */}
       <div className="hidden lg:flex items-center justify-between w-full lg:ml-[250px]">
         <Link href="/home" className="text-xl font-bold">
-          .
+        
         </Link>
 
         <div className="relative" ref={dropdownRef}>
