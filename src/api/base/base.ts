@@ -1,3 +1,3 @@
-const BASE_API_URL = "https://fund-cdf-tracker-frontend-django.onrender.com/";
+const BASE_API_URL = "http://localhost:8000/";
 
 export default BASE_API_URL

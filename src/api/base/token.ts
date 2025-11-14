@@ -1,7 +1,9 @@
 export interface DecodedToken {
-  user_id: number;
+
   role: string;
+  user_id: number;
   profile_id: number;
+  isPasswordUpdateOnFirstLogin: boolean; 
 }
 
 export function getTokenFromLocalStorage(): string | null {
@@ -54,3 +56,27 @@ export function getCurrentUserIdSafe(): number | null {
 
   return decoded.user_id; 
 }
+export function getIsPasswordUpdatedOnFirstLogin(): boolean | null {
+  console.log("Checking password update status on first login...");
+
+  const token = getTokenFromLocalStorage();
+  console.log("Retrieved token:", token);
+
+  if (!token) {
+    console.warn("No token found in localStorage.");
+    return null;
+  }
+
+  const decoded = decodedToken(token);
+  console.log("Decoded token:", decoded);
+
+  if (!decoded) {
+    console.error("Failed to decode token.");
+    return null;
+  }
+
+  console.log("isPasswordUpdateOnFirstLogin:", decoded.isPasswordUpdateOnFirstLogin);
+
+  return decoded.isPasswordUpdateOnFirstLogin;
+}
+
