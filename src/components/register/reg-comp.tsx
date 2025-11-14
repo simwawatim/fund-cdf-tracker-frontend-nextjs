@@ -21,7 +21,7 @@ const RegisterComp: React.FC = () => {
   const handleGetConstituencies = async () => {
     try {
       const response = await ConstituencyService.getConstituencies();
-      setConstituencies(response); 
+      setConstituencies(response);
     } catch (error) {
       console.error("Error fetching constituencies:", error);
       Swal.fire("Error", "Failed to fetch constituencies", "error");
@@ -37,34 +37,34 @@ const RegisterComp: React.FC = () => {
     }
 
     const payload: CreateMemberPayload = {
-            user: {
-              username: firstName.toUpperCase() + Math.floor(Math.random() * 90000),
-              email: email.toLowerCase(),
-              first_name:  firstName.toLowerCase(),
-              last_name: lastName.toLowerCase(),
-            },
-            role: "viewer",
-            phone: phone,
-            constituency: constituency,
+      user: {
+        username: firstName.toUpperCase() + Math.floor(Math.random() * 90000),
+        email: email.toLowerCase(),
+        first_name: firstName.toLowerCase(),
+        last_name: lastName.toLowerCase(),
+      },
+      role: "viewer",
+      phone: phone,
+      constituency: constituency,
     };
 
     try {
       setIsLoading(true);
       console.log("Register payload:", payload);
 
-        const response = await MemberService.createMember(payload);
-        if (response.status === "success") {
+      const response = await MemberService.createMember(payload);
+      if (response.status === "success") {
         Swal.fire("Success", "Member created successfully!", "success");
-        
-        } else {
+        window.location.href = "/"; 
+      } else {
         Swal.fire(
-            "Error",
-            typeof response.message === "string"
+          "Error",
+          typeof response.message === "string"
             ? response.message
             : JSON.stringify(response.message),
-            "error"
+          "error"
         );
-        }
+      }
     } catch (err) {
       console.error("Error registering user:", err);
       Swal.fire("Error", "Failed to register user", "error");
@@ -115,10 +115,7 @@ const RegisterComp: React.FC = () => {
 
           <form onSubmit={handleRegisterSubmit} className="mt-8 space-y-6">
             <div>
-              <label
-                htmlFor="first_name"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
                 First Name
               </label>
               <input
@@ -132,10 +129,7 @@ const RegisterComp: React.FC = () => {
             </div>
 
             <div>
-              <label
-                htmlFor="last_name"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
                 Last Name
               </label>
               <input
@@ -149,10 +143,7 @@ const RegisterComp: React.FC = () => {
             </div>
 
             <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                 Phone
               </label>
               <input
@@ -166,10 +157,7 @@ const RegisterComp: React.FC = () => {
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
               </label>
               <input
@@ -183,10 +171,7 @@ const RegisterComp: React.FC = () => {
             </div>
 
             <div>
-              <label
-                htmlFor="constituency"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="constituency" className="block text-sm font-medium text-gray-700">
                 Constituency
               </label>
               <select
@@ -208,21 +193,42 @@ const RegisterComp: React.FC = () => {
               </select>
             </div>
 
+            {/* Submit Button with Spinner */}
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full justify-center rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition"
+              className="flex w-full justify-center items-center gap-2 rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {isLoading ? "Signing up..." : "Sign up"}
+              {isLoading ? (
+                <svg
+                  className="h-5 w-5 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 018 8h-4l3.5 3.5L20 12h-4a8 8 0 01-8 8v-4l-3.5 3.5L4 20v-4a8 8 0 01-8-8z"
+                  ></path>
+                </svg>
+              ) : (
+                "Sign up"
+              )}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Already a member?{" "}
-            <a
-              href="/"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
+            <a href="/" className="font-medium text-indigo-600 hover:text-indigo-500">
               Login
             </a>
           </p>

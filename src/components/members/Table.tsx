@@ -23,15 +23,22 @@ interface Constituency {
 
 interface FormData extends Member {}
 
+// Small reusable spinner
+const Spinner = () => (
+  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+);
+
 const MembersTable = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [constituencies, setConstituencies] = useState<Constituency[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
+  const [isLoading, setIsLoading] = useState(false); // form actions
+  const [isFetching, setIsFetching] = useState(true); // full page fetch
+
+  const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 10;
 
   const [formData, setFormData] = useState<FormData>({
@@ -56,7 +63,6 @@ const MembersTable = () => {
       const response = await ConstituencyService.getConstituencies();
       setConstituencies(response);
     } catch (error) {
-      console.error("Error fetching constituencies:", error);
       Swal.fire("Error", "Failed to fetch constituencies", "error");
     }
   };
@@ -77,17 +83,21 @@ const MembersTable = () => {
       }));
       setMembers(mappedMembers);
     } catch (error) {
-      console.error("Error fetching members:", error);
       Swal.fire("Error", "Failed to fetch members", "error");
     }
   };
 
+  // Load everything
   useEffect(() => {
-    handleGetConstituencies();
-    fetchMembers();
+    const loadData = async () => {
+      setIsFetching(true);
+      await Promise.all([handleGetConstituencies(), fetchMembers()]);
+      setIsFetching(false);
+    };
+    loadData();
   }, []);
 
-  // Open modals
+  // Open Add modal
   const openAddModal = () => {
     setEditingMember(null);
     setFormData({
@@ -102,6 +112,7 @@ const MembersTable = () => {
     setIsModalOpen(true);
   };
 
+  // Open Edit modal
   const openEditModal = (member: Member) => {
     setEditingMember(member);
     setFormData({ ...member });
@@ -121,23 +132,21 @@ const MembersTable = () => {
     });
 
     if (confirm.isConfirmed) {
+      setIsLoading(true);
+
       const response = await MemberService.deleteMember(member.id);
       if (response.status === "success") {
         setMembers(members.filter((m) => m.id !== member.id));
         Swal.fire("Deleted!", "Member has been deleted.", "success");
       } else {
-        Swal.fire(
-          "Error",
-          typeof response.message === "string"
-            ? response.message
-            : JSON.stringify(response.message),
-          "error"
-        );
+        Swal.fire("Error", JSON.stringify(response.message), "error");
       }
+
+      setIsLoading(false);
     }
   };
 
-  // Form submit
+  // Submit form
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -150,18 +159,6 @@ const MembersTable = () => {
       !formData.phone
     ) {
       Swal.fire("Error", "All fields are required", "error");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Swal.fire("Error", "Invalid email address", "error");
-      return;
-    }
-
-    const phoneRegex = /^[0-9+()\s-]+$/;
-    if (!phoneRegex.test(formData.phone)) {
-      Swal.fire("Error", "Invalid phone number", "error");
       return;
     }
 
@@ -180,8 +177,10 @@ const MembersTable = () => {
         constituency: formData.constituency,
       };
 
+      // Update or create
       if (editingMember && editingMember.id) {
         const response = await MemberService.updateMember(editingMember.id, payload);
+
         if (response.status === "success") {
           Swal.fire("Success", "Member updated successfully!", "success");
           setMembers(
@@ -191,52 +190,39 @@ const MembersTable = () => {
           );
           setIsModalOpen(false);
         } else {
-          Swal.fire(
-            "Error",
-            typeof response.message === "string"
-              ? response.message
-              : JSON.stringify(response.message),
-            "error"
-          );
+          Swal.fire("Error", JSON.stringify(response.message), "error");
         }
       } else {
         const response = await MemberService.createMember(payload);
+
         if (response.status === "success") {
           Swal.fire("Success", "Member created successfully!", "success");
+
           const created: any = response.data ?? {};
           setMembers([
             ...members,
             {
-              id: created.id ?? undefined,
-              firstName:
-                created.first_name ?? payload.user.first_name ?? formData.firstName,
-              lastName:
-                created.last_name ?? payload.user.last_name ?? formData.lastName,
-              email: created.email ?? payload.user.email ?? formData.email,
+              id: created.id,
+              firstName: created.first_name ?? payload.user.first_name,
+              lastName: created.last_name ?? payload.user.last_name,
+              email: created.email ?? payload.user.email,
               role: created.role ?? formData.role,
               phone: created.phone ?? formData.phone,
-              constituency:
-                created.constituency ?? payload.constituency ?? formData.constituency ?? 0,
+              constituency: created.constituency ?? formData.constituency,
               image: "default-profile.png",
             },
           ]);
+
           setIsModalOpen(false);
         } else {
-          Swal.fire(
-            "Error",
-            typeof response.message === "string"
-              ? response.message
-              : JSON.stringify(response.message),
-            "error"
-          );
+          Swal.fire("Error", JSON.stringify(response.message), "error");
         }
       }
     } catch (error: any) {
-      console.error("Error creating/updating member:", error);
       Swal.fire("Error", error?.message || "Something went wrong", "error");
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   // Search filter
@@ -250,11 +236,23 @@ const MembersTable = () => {
     );
   });
 
-  // Pagination
+  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentMembers = filteredMembers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+
+  // Full page loader
+  if (isFetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-900"></div>
+          <p className="mt-4 text-lg text-black font-medium">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -263,20 +261,23 @@ const MembersTable = () => {
       <div className="mb-4 flex justify-between items-center">
         <button
           onClick={openAddModal}
-          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
+          disabled={isLoading}
+          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black flex items-center space-x-2"
         >
-          Add User
+          {isLoading ? <Spinner /> : <span>Add User</span>}
         </button>
 
         <input
+          disabled={isLoading}
           type="text"
           placeholder="Search by name, email, or role"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="mblockt-2  rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          className="mblockt-2 rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
         />
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg shadow-md">
           <thead className="bg-gray-200 text-gray-700">
@@ -292,6 +293,7 @@ const MembersTable = () => {
               <th className="text-left py-3 px-6">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {currentMembers.map((member, index) => (
               <tr key={member.id || index} className="border-b hover:bg-gray-50">
@@ -311,22 +313,27 @@ const MembersTable = () => {
                   {constituencies.find((c) => c.id === member.constituency)?.name || "N/A"}
                 </td>
                 <td className="py-3 px-6 text-black">{member.phone}</td>
+
                 <td className="py-3 px-6 flex space-x-2">
                   <button
+                    disabled={isLoading}
                     onClick={() => openEditModal(member)}
                     className="text-blue-600 hover:underline"
                   >
-                    Edit
+                    {isLoading ? "..." : "Edit"}
                   </button>
+
                   <button
+                    disabled={isLoading}
                     onClick={() => handleDelete(member)}
                     className="text-red-600 hover:underline"
                   >
-                    Delete
+                    {isLoading ? "..." : "Delete"}
                   </button>
                 </td>
               </tr>
             ))}
+
             {filteredMembers.length === 0 && (
               <tr>
                 <td colSpan={9} className="text-center py-4 text-gray-500">
@@ -341,23 +348,30 @@ const MembersTable = () => {
       {/* Pagination */}
       <div className="flex justify-center mt-4 space-x-2">
         <button
+          disabled={isLoading}
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
         >
           Prev
         </button>
+
         {[...Array(totalPages)].map((_, i) => (
           <button
             key={i}
+            disabled={isLoading}
             onClick={() => setCurrentPage(i + 1)}
             className={`px-3 py-1 rounded hover:bg-gray-300 ${
-              currentPage === i + 1 ? "bg-black text-white" : "bg-white text-black"
+              currentPage === i + 1
+                ? "bg-black text-white"
+                : "bg-white text-black"
             }`}
           >
             {i + 1}
           </button>
         ))}
+
         <button
+          disabled={isLoading}
           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
           className="px-3 py-1 bg-green-900 rounded hover:bg-gray-300"
         >
@@ -372,6 +386,7 @@ const MembersTable = () => {
             <h2 className="text-2xl font-bold mb-4">
               {editingMember ? "Edit Member" : "Add Member"}
             </h2>
+
             <form onSubmit={handleSubmit} className="space-y-3">
               {["firstName", "lastName", "email", "phone"].map((field) => (
                 <input
@@ -388,10 +403,12 @@ const MembersTable = () => {
                 />
               ))}
 
-              {/* Role Dropdown */}
+              {/* Role */}
               <select
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, role: e.target.value })
+                }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 required
                 disabled={isLoading}
@@ -406,11 +423,14 @@ const MembersTable = () => {
                 ))}
               </select>
 
-              {/* Constituency Dropdown */}
+              {/* Constituency */}
               <select
                 value={formData.constituency}
                 onChange={(e) =>
-                  setFormData({ ...formData, constituency: Number(e.target.value) })
+                  setFormData({
+                    ...formData,
+                    constituency: Number(e.target.value),
+                  })
                 }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 required
@@ -435,12 +455,20 @@ const MembersTable = () => {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black"
+                  className="px-4 py-2 rounded bg-green-900 text-white hover:bg-black flex items-center space-x-2"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Submitting..." : editingMember ? "Update" : "Add"}
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <Spinner />
+                      <span>{editingMember ? "Updating..." : "Submitting..."}</span>
+                    </div>
+                  ) : (
+                    editingMember ? "Update" : "Add"
+                  )}
                 </button>
               </div>
             </form>
