@@ -87,6 +87,22 @@ class ProfileService {
     }
   }
 
+
+  async getProfilePictureByProfileId(userId: number): Promise<{ status: "success"; profile_pic: string } | ProfileError> {
+    try {
+      const response = await axios.get(`${BASE_API_URL}api/user-profiles-by-profile-id/picture/${userId}/`);
+
+      if (response.data?.status === "success") {
+        return { status: "success", profile_pic: response.data.profile_pic };
+      }
+
+      return { status: "error", message: response.data?.message || "Failed to fetch profile picture" };
+    } catch (err: any) {
+      const error = handleApiError(err, "Unable to fetch profile picture.");
+      return { status: "error", message: error.message || "Unknown error occurred" };
+    }
+  }
+
 }
 
 export default new ProfileService();

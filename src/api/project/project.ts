@@ -168,7 +168,6 @@ async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse
   try {
     let response;
     if (data.file) {
-      // Send multipart/form-data
       const formData = new FormData();
       formData.append("project", data.project.toString());
       formData.append("status", data.status);
@@ -186,11 +185,13 @@ async createProjectUpdate(data: ProjectUpdateAPI): Promise<ProjectUpdateResponse
                       ...getAuthHeader() } }
       );
     } else {
-      // Send JSON if no file
       response = await axios.post<ProjectUpdateResponse>(
         `${BASE_API_URL}api/project-updates/v1/`,
         data,
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeader() 
+        } }
       );
     }
 

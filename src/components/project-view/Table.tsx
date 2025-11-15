@@ -4,11 +4,13 @@ import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Swal from "sweetalert2";
-import ProjectService, { ProjectAPI, ProjectUpdateAPI } from "../../api/project/project";
+import ProjectService, { ProjectAPI } from "../../api/project/project";
 import { CommentsAPI } from "../../api/comment/comment";
 import MemberService from "../../api/member/member";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
 import BASE_API_URL from "@/api/base/base";
+import { getCurrentProfileId } from "@/api/base/token";
+import ProfileService from "@/api/profile/profile"; 
 
 const ProjectHeader = dynamic(() => import("./ProjectHeader"), { ssr: false });
 const ProjectDetails = dynamic(() => import("./ProjectDetails"), { ssr: false });
@@ -26,15 +28,12 @@ interface ProgressUpdate {
   remarks: string;
   date: string;
   documents: string[];
+  updated_by_id: number;
   project_update?: number;
 }
 
 interface UserProfileAPI {
-  user: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  user: { first_name: string; last_name: string; email: string };
   image?: string | null;
   phone?: string | null;
   role?: string | null;
@@ -51,6 +50,7 @@ interface CommentAPI {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  avatar: string;
 }
 
 interface CommentsSectionProps {
@@ -65,6 +65,7 @@ const CommentsSection = ({ comments, loading, onAdd, onEdit, onDelete }: Comment
   const [newComment, setNewComment] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
+  const currentProfileId = getCurrentProfileId();
 
   return (
     <div className="bg-white shadow rounded-2xl p-4 max-h-[500px] overflow-y-auto">
@@ -86,6 +87,7 @@ const CommentsSection = ({ comments, loading, onAdd, onEdit, onDelete }: Comment
           </button>
           <button
             onClick={async () => {
+              if (!newComment.trim()) return;
               await onAdd(newComment.trim());
               setNewComment("");
             }}
@@ -101,12 +103,14 @@ const CommentsSection = ({ comments, loading, onAdd, onEdit, onDelete }: Comment
         {comments.map((c) => (
           <div key={c.id} className="border rounded-md p-3">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold">
-                {c.user_name ? c.user_name.charAt(0).toUpperCase() : "U"}
-              </div>
+              <img
+                src={c.avatar}
+                alt={c.user_name}
+                className="w-10 h-10 rounded-full object-cover border border-gray-300"
+              />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <div className="text-black text-sm font-medium">{c.user_name || `User ${c.user}`}</div>
+                  <div className="text-black text-sm font-medium">{c.user_name}</div>
                   <div className="text-black text-xs">{new Date(c.created_at).toLocaleString()}</div>
                 </div>
 
@@ -140,14 +144,19 @@ const CommentsSection = ({ comments, loading, onAdd, onEdit, onDelete }: Comment
                 </div>
 
                 <div className="mt-2 flex items-center gap-3 flex-wrap">
-                  <button
-                    onClick={() => { setEditingId(c.id); setEditingText(c.message); }}
-                    className="text-xs text-blue-600"
-                  >
-                    Edit
-                  </button>
-                  <button onClick={() => onDelete(c.id)} className="text-xs text-red-600">Delete</button>
-                
+                  {c.user === currentProfileId && (
+                    <>
+                      <button
+                        onClick={() => { setEditingId(c.id); setEditingText(c.message); }}
+                        className="text-xs text-blue-600"
+                      >
+                        Edit
+                      </button>
+                      <button onClick={() => onDelete(c.id)} className="text-xs text-red-600">
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -166,11 +175,13 @@ const ProjectViewTable = () => {
   const [sectionIndex, setSectionIndex] = useState(0);
   const [projectDetails, setProjectDetails] = useState<ProjectAPI | null>(null);
   const [progressData, setProgressData] = useState<ProgressUpdate[]>([]);
+  const [progressAvatars, setProgressAvatars] = useState<Record<number, string>>({});
   const [comments, setComments] = useState<CommentAPI[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [createdBy, setCreatedBy] = useState<UserProfileAPI | null>(null);
   const [categories, setCategories] = useState<ProgramAPI[]>([]);
 
+  // Section animation
   useEffect(() => {
     if (sectionIndex < 5) {
       const timer = setTimeout(() => setSectionIndex((prev) => prev + 1), 1000);
@@ -183,10 +194,9 @@ const ProjectViewTable = () => {
     return `Constituency ${createdBy.constituency}`;
   };
 
-
+  // Fetch project & creator
   useEffect(() => {
     if (!id) return;
-
     const fetchProjectAndCreator = async () => {
       try {
         const response = await ProjectService.getProjectById(Number(id));
@@ -211,32 +221,30 @@ const ProjectViewTable = () => {
               });
             }
           }
-        } else {
-          await Swal.fire("Error", response.message as string, "error");
-        }
+        } else Swal.fire("Error", response.message as string, "error");
       } catch (err) {
         console.error("Error fetching project:", err);
-        await Swal.fire("Error", "Failed to load project data", "error");
+        Swal.fire("Error", "Failed to load project data", "error");
       }
     };
-
     fetchProjectAndCreator();
   }, [id]);
 
+  // Fetch project updates & avatars
   useEffect(() => {
     if (!id) return;
 
-    const fetchUpdatesAndDocs = async () => {
+    const fetchUpdates = async () => {
       try {
         const updatesResp = await ProjectService.getProjectUpdateBasedOnProjectId(Number(id));
         if (!(updatesResp && updatesResp.status === "success" && Array.isArray(updatesResp.data))) {
-          await Swal.fire("Error", "Failed to fetch project updates", "error");
+          Swal.fire("Error", "Failed to fetch project updates", "error");
           return;
         }
 
         const mappedUpdates: ProgressUpdate[] = updatesResp.data.map((u: any) => ({
           id: u.id,
-          user: "User 1",
+          user: "User",
           avatar: "/default-profile.png",
           status: u.status,
           progress_percentage: u.progress_percentage,
@@ -248,17 +256,35 @@ const ProjectViewTable = () => {
           project_update: u.id,
         }));
 
-        console.log("Mapped Updates:", mappedUpdates);
-
         setProgressData(mappedUpdates);
+
+        // Fetch avatars dynamically
+        const avatarsMap: Record<number, string> = {};
+        await Promise.all(
+          mappedUpdates.map(async (upd) => {
+            try {
+              const res = await ProfileService.getProfilePictureById(upd.updated_by_id);
+              avatarsMap[upd.updated_by_id] =
+                res.status === "success" && res.profile_pic
+                  ? res.profile_pic.startsWith("http")
+                    ? res.profile_pic
+                    : `${BASE_API_URL}${res.profile_pic}`
+                  : "/default-profile.png";
+            } catch {
+              avatarsMap[upd.updated_by_id] = "/default-profile.png";
+            }
+          })
+        );
+        setProgressAvatars(avatarsMap);
       } catch (err) {
-        console.error("Error fetching updates and docs:", err);
-        await Swal.fire("Error", "Failed to load progress updates or documents", "error");
+        console.error(err);
+        Swal.fire("Error", "Failed to load progress updates", "error");
       }
     };
 
-    fetchUpdatesAndDocs();
+    fetchUpdates();
   }, [id]);
+
   useEffect(() => { if (!id) return; fetchComments(Number(id)); }, [id]);
 
   const fetchComments = async (projectId: number) => {
@@ -266,18 +292,42 @@ const ProjectViewTable = () => {
     try {
       const response = await CommentsAPI.getComments(projectId);
       if (response.status === "success") {
-        const data = Array.isArray(response.data) ? response.data : [response.data];
-        setComments(data.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
-      } else {
-        await Swal.fire("Error", response.message, "error");
-      }
+        let data = Array.isArray(response.data) ? response.data : [response.data];
+
+        const formattedComments: CommentAPI[] = await Promise.all(
+          data.map(async (c: any) => {
+            let avatar = "/default-profile.png";
+            try {
+              const res = await ProfileService.getProfilePictureByProfileId(c.user);
+              avatar = res.status === "success" && res.profile_pic
+                ? res.profile_pic.startsWith("http")
+                  ? res.profile_pic
+                  : `${BASE_API_URL}${res.profile_pic}`
+                : "/default-profile.png";
+            } catch {
+              avatar = "/default-profile.png";
+            }
+            return {
+              ...c,
+              avatar,
+              user_name: c.user_name || `User ${c.user}`,
+            };
+          })
+        );
+
+        setComments(
+          formattedComments.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        );
+      } else Swal.fire("Error", response.message, "error");
     } catch (err) {
       console.error("Failed to fetch comments:", err);
-      await Swal.fire("Error", "Failed to load comments", "error");
+      Swal.fire("Error", "Failed to load comments", "error");
     } finally {
       setLoadingComments(false);
     }
   };
+
+  // Fetch programs
   useEffect(() => {
     const fetchPrograms = async () => {
       const response = await ProgramService.getPrograms();
@@ -289,11 +339,11 @@ const ProjectViewTable = () => {
 
   const handleAddComment = async (message: string, parent: number | null = null) => {
     if (!id || !message.trim()) return;
-    const storedUser = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
-    const userId = storedUser ? Number(storedUser) : 12;
+    const profileId = getCurrentProfileId();
+    if (profileId === null) return;
 
     try {
-      const response = await CommentsAPI.createComment(Number(id), userId, message, parent);
+      const response = await CommentsAPI.createComment(Number(id), profileId, message, parent);
       if (response.status === "success") await fetchComments(Number(id));
       else Swal.fire("Error", response.message, "error");
     } catch (err) {
@@ -326,16 +376,12 @@ const ProjectViewTable = () => {
     if (!confirmed.isConfirmed) return;
 
     try {
-     const response = await CommentsAPI.deleteComment(commentId);
-
-      if (response.status === "success") {
-        await fetchComments(Number(id));
-      } else {
-        Swal.fire("Error", response.message || "Unable to delete comment", "error");
-      }
+      const response = await CommentsAPI.deleteComment(commentId);
+      if (response.status === "success") await fetchComments(Number(id));
+      else Swal.fire("Error", response.message || "Unable to delete comment", "error");
     } catch (err) {
       console.error("Failed to delete comment:", err);
-      await Swal.fire("Error", "Failed to delete comment", "error");
+      Swal.fire("Error", "Failed to delete comment", "error");
     }
   };
 
@@ -382,12 +428,11 @@ const ProjectViewTable = () => {
         </div>
 
         <div className="flex-1 max-w-full lg:max-w-xs self-start">
-         
           {sectionIndex >= 4 && createdBy && (
             <CreatedByInfo
               creator={{
                 name: `${createdBy.user.first_name} ${createdBy.user.last_name}`,
-                avatar: ` ${BASE_API_URL}${createdBy.image}`,
+                avatar: createdBy.image?.startsWith("http") ? createdBy.image : `${BASE_API_URL}${createdBy.image}`,
                 date: "Aug 18",
                 email: createdBy.user.email,
                 mobile: createdBy.phone,
@@ -398,10 +443,17 @@ const ProjectViewTable = () => {
         </div>
       </div>
 
+      {/* Bottom Section */}
       <div className="flex flex-col lg:flex-row gap-6 p-4 w-full">
         <div className="w-full lg:w-8/12 overflow-x-auto">
           {sectionIndex >= 5 ? (
-            <ProgressTable data={progressData as any} onViewFile={setSelectedFile} />
+            <ProgressTable
+              data={progressData.map((upd) => ({
+                ...upd,
+                avatar: progressAvatars[upd.updated_by_id] || "/default-profile.png",
+              }))}
+              onViewFile={setSelectedFile}
+            />
           ) : (
             <div className="h-64 animate-pulse bg-gray-200 rounded-lg mb-4" />
           )}
@@ -421,7 +473,6 @@ const ProjectViewTable = () => {
           )}
         </div>
       </div>
-
     </>
   );
 };

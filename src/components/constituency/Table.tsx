@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ConstituencyService from "../../api/constituency/constituency";
 import Swal from "sweetalert2";
+import { getCurrentUserRole } from "@/api/base/token";
 
 interface Constituency {
   id?: number;
@@ -18,6 +19,8 @@ const ConstituencyTable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConstituency, setEditingConstituency] = useState<Constituency | null>(null);
   const [formData, setFormData] = useState<Constituency>({ name: "", province: "" });
+  const [role, setRole] = useState<string | null>(null);
+
 
   const itemsPerPage = 20;
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -28,6 +31,12 @@ const ConstituencyTable = () => {
   useEffect(() => {
     handleGetConstituencies();
   }, []);
+
+  useEffect(() => {
+  const r = getCurrentUserRole();
+  setRole(r);
+}, []);
+
 
   const handleGetConstituencies = async () => {
     try {
@@ -135,13 +144,15 @@ const ConstituencyTable = () => {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-black">Constituencies Table</h1>
+      {role === "admin" && (
+          <div className="mb-4">
+            <button onClick={openAddModal} className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black">
+              Add Constituency
+            </button>
+          </div>
+        )}
 
-      <div className="mb-4">
-        <button onClick={openAddModal} className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black">
-          Add Constituency
-        </button>
 
-      </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg shadow-md">
@@ -151,7 +162,10 @@ const ConstituencyTable = () => {
               <th className="text-left py-3 px-6">Name</th>
               <th className="text-left py-3 px-6">Province</th>
               <th className="text-left py-3 px-6">Created On</th>
-              <th className="text-left py-3 px-6">Edit</th>
+              {role === "admin" && (
+                <th className="text-left py-3 px-6">Action</th>
+              )}
+
 
             </tr>
           </thead>
@@ -163,21 +177,17 @@ const ConstituencyTable = () => {
                 <td className="py-3 text-black px-6">{c.province}</td>
                 <td className="py-3 text-black px-6">{formatDate(c.created_at)}</td>
 
-                
-                <td className="py-3 text-black px-6 space-x-2">
-                  <button
-                    onClick={() => openEditModal(c)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
+                {role === "admin" && (
+                  <td className="py-3 text-black px-6 space-x-2">
+                    <button onClick={() => openEditModal(c)} className="text-blue-600 hover:underline">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:underline">
+                      Delete
+                    </button>
+                  </td>
+                )}
+
 
               </tr>
             ))}
