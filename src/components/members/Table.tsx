@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import MemberService, { CreateMemberPayload } from "../../api/member/member";
 import ConstituencyService from "../../api/constituency/constituency";
+import { getCurrentUserRole } from "@/api/base/token";
+import ProfileService from "@/api/profile/profile";
+import BASE_API_URL from "@/api/base/base";
 
 interface Member {
   id?: number;
@@ -23,7 +26,7 @@ interface Constituency {
 
 interface FormData extends Member {}
 
-// Small reusable spinner
+
 const Spinner = () => (
   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
 );
@@ -35,8 +38,8 @@ const MembersTable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
-  const [isLoading, setIsLoading] = useState(false); // form actions
-  const [isFetching, setIsFetching] = useState(true); // full page fetch
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true); 
 
   const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 10;
@@ -57,7 +60,6 @@ const MembersTable = () => {
     { value: "viewer", label: "Viewer" },
   ];
 
-  // Fetch constituencies
   const handleGetConstituencies = async () => {
     try {
       const response = await ConstituencyService.getConstituencies();
@@ -67,27 +69,46 @@ const MembersTable = () => {
     }
   };
 
-  // Fetch members
-  const fetchMembers = async () => {
-    try {
-      const data = await MemberService.getMembers();
-      const mappedMembers: Member[] = data.map((m: any) => ({
-        id: m.id,
-        firstName: m.user.first_name,
-        lastName: m.user.last_name,
-        email: m.user.email,
-        role: m.role,
-        constituency: m.constituency ?? 0,
-        phone: m.phone,
-        image: "default-profile.png",
-      }));
-      setMembers(mappedMembers);
-    } catch (error) {
-      Swal.fire("Error", "Failed to fetch members", "error");
-    }
-  };
 
-  // Load everything
+const fetchMembers = async () => {
+  try {
+    const data = await MemberService.getMembers();
+
+    const mappedMembers: Member[] = await Promise.all(
+      data.map(async (m: any) => {
+        let profileImage = "default-profile.png";
+
+        try {
+          const picRes = await ProfileService.getProfilePictureByProfileId(m.id);
+          if (picRes.status === "success" && picRes.profile_pic) {
+            profileImage = picRes.profile_pic.startsWith("http")
+              ? picRes.profile_pic
+              : `${BASE_API_URL}${picRes.profile_pic}`;
+          }
+        } catch (e) {
+          profileImage = "default-profile.png";
+        }
+
+        return {
+          id: m.id,
+          firstName: m.user.first_name,
+          lastName: m.user.last_name,
+          email: m.user.email,
+          role: m.role,
+          constituency: m.constituency ?? 0,
+          phone: m.phone,
+          image: profileImage,
+        };
+      })
+    );
+
+    setMembers(mappedMembers);
+  } catch (error) {
+    Swal.fire("Error", "Failed to fetch members", "error");
+  }
+};
+
+
   useEffect(() => {
     const loadData = async () => {
       setIsFetching(true);
@@ -97,7 +118,6 @@ const MembersTable = () => {
     loadData();
   }, []);
 
-  // Open Add modal
   const openAddModal = () => {
     setEditingMember(null);
     setFormData({
@@ -112,14 +132,14 @@ const MembersTable = () => {
     setIsModalOpen(true);
   };
 
-  // Open Edit modal
+ 
   const openEditModal = (member: Member) => {
     setEditingMember(member);
     setFormData({ ...member });
     setIsModalOpen(true);
   };
 
-  // Delete member
+
   const handleDelete = async (member: Member) => {
     if (!member.id) return;
 
@@ -146,7 +166,6 @@ const MembersTable = () => {
     }
   };
 
-  // Submit form
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -225,7 +244,7 @@ const MembersTable = () => {
     setIsLoading(false);
   };
 
-  // Search filter
+  
   const filteredMembers = members.filter((member) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -236,13 +255,12 @@ const MembersTable = () => {
     );
   });
 
-  // Pagination logic
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentMembers = filteredMembers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
 
-  // Full page loader
   if (isFetching) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -259,13 +277,16 @@ const MembersTable = () => {
       <h1 className="text-3xl font-bold mb-6 text-black">Members Table</h1>
 
       <div className="mb-4 flex justify-between items-center">
-        <button
-          onClick={openAddModal}
-          disabled={isLoading}
-          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black flex items-center space-x-2"
-        >
-          {isLoading ? <Spinner /> : <span>Add User</span>}
-        </button>
+        {getCurrentUserRole() === "admin" && (
+          <button
+            onClick={openAddModal}
+            disabled={isLoading}
+            className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black flex items-center space-x-2"
+          >
+            {isLoading ? <Spinner /> : <span>Add User</span>}
+          </button>
+        )}
+
 
         <input
           disabled={isLoading}
@@ -277,7 +298,6 @@ const MembersTable = () => {
         />
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg shadow-md">
           <thead className="bg-gray-200 text-gray-700">
@@ -290,8 +310,11 @@ const MembersTable = () => {
               <th className="text-left py-3 px-6">Role</th>
               <th className="text-left py-3 px-6">Constituency</th>
               <th className="text-left py-3 px-6">Phone</th>
+              {getCurrentUserRole() === "admin"&& (
               <th className="text-left py-3 px-6">Actions</th>
+                )}
             </tr>
+              
           </thead>
 
           <tbody>
@@ -315,22 +338,27 @@ const MembersTable = () => {
                 <td className="py-3 px-6 text-black">{member.phone}</td>
 
                 <td className="py-3 px-6 flex space-x-2">
-                  <button
-                    disabled={isLoading}
-                    onClick={() => openEditModal(member)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {isLoading ? "..." : "Edit"}
-                  </button>
+                {getCurrentUserRole() === "admin"&& (
+                  <>
+                    <button
+                      disabled={isLoading}
+                      onClick={() => openEditModal(member)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {isLoading ? "..." : "Edit"}
+                    </button>
 
-                  <button
-                    disabled={isLoading}
-                    onClick={() => handleDelete(member)}
-                    className="text-red-600 hover:underline"
-                  >
-                    {isLoading ? "..." : "Delete"}
-                  </button>
-                </td>
+                    <button
+                      disabled={isLoading}
+                      onClick={() => handleDelete(member)}
+                      className="text-red-600 hover:underline"
+                    >
+                      {isLoading ? "..." : "Delete"}
+                    </button>
+                  </>
+                )}
+              </td>
+
               </tr>
             ))}
 
@@ -344,8 +372,6 @@ const MembersTable = () => {
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
       <div className="flex justify-center mt-4 space-x-2">
         <button
           disabled={isLoading}
@@ -379,7 +405,6 @@ const MembersTable = () => {
         </button>
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
           <div className="bg-white bg-opacity-70 backdrop-blur-md rounded-lg w-96 p-6 relative text-black">

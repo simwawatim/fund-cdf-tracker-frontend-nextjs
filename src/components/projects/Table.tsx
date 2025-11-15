@@ -7,6 +7,7 @@ import Link from "next/link";
 import ConstituencyService from "../../api/constituency/constituency";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
 import ProjectService, { ProjectAPI } from "../../api/project/project";
+import { getCurrentUserRole } from "@/api/base/token";
 
 interface Project {
   id: number;
@@ -39,6 +40,11 @@ const ProjectsTable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [role, setRole] = useState<string | null>(null);
+    useEffect(() => {
+      setRole(getCurrentUserRole());
+    }, []);
+  
 
   const itemsPerPage = 10;
 
@@ -55,7 +61,10 @@ const ProjectsTable = () => {
       case "on_hold":
         return "bg-orange-100 text-orange-700";
       case "cancelled":
-        return "bg-red-100 text-red-700";
+          return "bg-red-100 text-red-700";
+      case "rejected":
+          return "bg-red-100 text-red-700";
+
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -221,6 +230,7 @@ const ProjectsTable = () => {
     <div className="p-6 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-black">Projects Table</h1>
 
+      {role === "officer" && (
       <div className="mb-4 flex justify-between items-center">
         <button
           onClick={openAddModal}
@@ -237,6 +247,7 @@ const ProjectsTable = () => {
           className="mblockt-2 rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
         />
       </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg shadow-md">

@@ -1,14 +1,13 @@
 "use client";
 
-import AuthService, { ErrorLoginResponse, SuccessLoginResponse } from "../../api/login/login";
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
+import BASE_API_URL from "../../api/base/base";
 
-const LoginComp = () => {
+const ResetPasswordComp = () => {
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -18,24 +17,42 @@ const LoginComp = () => {
 
   if (!mounted) return null;
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const loginResponse: SuccessLoginResponse = await AuthService.login(email, password);
-      localStorage.setItem("access_token", loginResponse.access);
-      router.push("/home");
+      const response = await fetch(`${BASE_API_URL}/api/password-reset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    } catch (err) {
-      const error = err as ErrorLoginResponse;
+      const data = await response.json();
+
+      if (response.ok) {
+        Swal.fire({
+          title: "Success",
+          text: data.detail || "Password reset email sent successfully!",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+        setEmail("");
+      } else {
+        Swal.fire({
+          title: "Failed",
+          text: data.email ? data.email[0] : data.detail || "Something went wrong.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (error: any) {
       Swal.fire({
-        title: "Login Failed",
-        text: error.message,
+        title: "Error",
+        text: error.message || "Something went wrong.",
         icon: "error",
         confirmButtonText: "OK",
       });
-
     } finally {
       setLoading(false);
     }
@@ -68,11 +85,12 @@ const LoginComp = () => {
             <img src="/zambia-flag.png" alt="Zambian Flag" className="w-full h-full object-cover" />
           </div>
 
-          <h2 className="text-center text-3xl font-extrabold text-gray-900 mt-6">Sign in</h2>
-          <p className="mt-2 text-center text-sm text-gray-500">Enter your credentials to access your account</p>
+          <h2 className="text-center text-3xl font-extrabold text-gray-900 mt-6">Reset Password</h2>
+          <p className="mt-2 text-center text-sm text-gray-500">
+            Enter your email address to receive a password reset link
+          </p>
 
-          <form onSubmit={handleLoginSubmit} className="mt-8 space-y-6">
-
+          <form onSubmit={handlePasswordReset} className="mt-8 space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
@@ -83,20 +101,6 @@ const LoginComp = () => {
                 value={email}
                 required
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
                 className="mt-2 block w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               />
             </div>
@@ -129,31 +133,17 @@ const LoginComp = () => {
                   ></path>
                 </svg>
               ) : (
-                "Sign in"
+                "Send Reset Link"
               )}
             </button>
           </form>
 
-            <div className="mt-2 text-right space-y-1">
-              <a
-                href="/reset-password"
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-500 block"
-              >
-                Forgot Password?
-              </a>
-              <p className="text-xs text-gray-500">
-                Make sure your email is correct before resetting your password.
-              </p>
-              <p className="text-xs text-gray-500">
-                If you don’t have an account, you can{" "}
-                <a href="/register" className="text-indigo-600 hover:text-indigo-500">
-                  sign up here
-                </a>.
-              </p>
-              <p className="text-xs text-gray-500">
-                For security reasons, your password should be at least 8 characters long.
-              </p>
-            </div>
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Remember your password?{" "}
+            <a href="/" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Sign in
+            </a>
+          </p>
 
         </div>
       </div>
@@ -161,4 +151,4 @@ const LoginComp = () => {
   );
 };
 
-export default LoginComp;
+export default ResetPasswordComp;

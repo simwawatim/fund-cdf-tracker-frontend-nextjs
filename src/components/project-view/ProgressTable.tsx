@@ -131,16 +131,37 @@ const ProgressTable = ({ data }: ProgressTableProps) => {
                       src={avatars[item.updated_by_id]}
                       className="w-8 h-8 rounded-full object-cover border border-gray-300"
                     />
-                    {/* <span className="truncate max-w-[100px] sm:max-w-[150px]">
-                      {item.user}
-                    </span> */}
                   </td>
 
-                  <td className="py-2 px-2 sm:px-4">
-                    <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-semibold">
-                      {item.status}
-                    </span>
-                  </td>
+               <td className="py-2 px-2 sm:px-4">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      item.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : item.status === "in_progress"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : item.status === "halfway"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : item.status === "almost_done"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : item.status === "planning"
+                        ? "bg-blue-100 text-blue-700"
+                        : item.status === "on_hold"
+                        ? "bg-orange-100 text-orange-800"
+                        : item.status === "cancelled" || item.status === "rejected"
+                        ? "bg-red-100 text-red-800"
+                        : item.status === "pending"
+                        ? "bg-yellow-200 text-yellow-900"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {item.status
+                      .replace("_", " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </span>
+                </td>
+
+
 
                   <td className="py-2 px-2 sm:px-4 text-gray-900 font-medium">
                     <div className="flex items-center gap-2">

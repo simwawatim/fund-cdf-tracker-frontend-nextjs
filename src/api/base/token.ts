@@ -40,6 +40,16 @@ export const clearAuthToken = () => {
   localStorage.removeItem("refresh_token");
 };
 
+
+export function getCurrentUserRole(): string | null {
+  const token = getTokenFromLocalStorage();
+  if (!token) return null;
+
+  const decoded = decodedToken(token);
+  return decoded ? decoded.role : null;
+};
+
+
 export function getCurrentProfileId(): number | null {
   const token = getTokenFromLocalStorage();
   if (!token) return null;
@@ -80,3 +90,11 @@ export function getIsPasswordUpdatedOnFirstLogin(): boolean | null {
   return decoded.isPasswordUpdateOnFirstLogin;
 }
 
+export function getCurrentUserConstituency(): number | null {
+  const token = getTokenFromLocalStorage();
+  if (!token) return null;
+
+  const decoded = decodedToken(token);
+  if (!decoded || !("constituency" in decoded)) return null;
+  return decoded.constituency as number;
+}

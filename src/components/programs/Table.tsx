@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import ProgramService, { ProgramAPI } from "../../api/program/program";
+import { getCurrentUserRole } from "@/api/base/token";
 
 const CDFCategoriesTable = () => {
   const [categories, setCategories] = useState<ProgramAPI[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ProgramAPI | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   const itemsPerPage = 3;
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -17,6 +19,10 @@ const CDFCategoriesTable = () => {
   const totalPages = Math.ceil(categories.length / itemsPerPage);
 
   const [formData, setFormData] = useState({ name: "", description: "" });
+  useEffect(() => {
+    setRole(getCurrentUserRole());
+  }, []);
+
 
   useEffect(() => {
     const fetchPrograms = async () => {
@@ -104,14 +110,16 @@ const CDFCategoriesTable = () => {
       <h1 className="text-3xl font-bold mb-6 text-black">CDF Programs Offered</h1>
 
       {/* Add button */}
-      <div className="mb-4">
-        <button
-          onClick={openAddModal}
-          className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
-        >
-          Add Program
-        </button>
-      </div>
+     {role === "admin" && (
+        <div className="mb-4">
+          <button
+            onClick={openAddModal}
+            className="bg-green-900 text-white px-4 py-2 rounded hover:bg-black"
+          >
+            Add Program
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -120,7 +128,9 @@ const CDFCategoriesTable = () => {
             <tr>
               <th className="text-left py-3 px-6">Program Name</th>
               <th className="text-left py-3 px-6">Description</th>
-              <th className="text-left py-3 px-6 text-center">Actions</th>
+               {role === "admin" && (
+                <th className="text-left py-3 px-6 text-center">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -128,20 +138,22 @@ const CDFCategoriesTable = () => {
               <tr key={category.id} className="border-b hover:bg-gray-50">
                 <td className="py-3 text-black px-6">{category.name}</td>
                 <td className="py-3 text-black px-6">{category.description}</td>
-                <td className="py-3 px-6 flex justify-center gap-3">
-                  <button
-                    onClick={() => openEditModal(category)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(category.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
+                 {role === "admin" && (
+                  <td className="py-3 px-6 flex justify-center gap-3">
+                    <button
+                      onClick={() => openEditModal(category)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(category.id)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

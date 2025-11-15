@@ -1,2 +1,2 @@
-const PDF_API_URL = "http://localhost:8000";
+const PDF_API_URL = "https://fund-cdf-tracker-frontend-django.onrender.com";
 export default PDF_API_URL;
