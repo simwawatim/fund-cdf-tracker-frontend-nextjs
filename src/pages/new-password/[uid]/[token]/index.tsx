@@ -43,7 +43,7 @@ const NewPasswordPage: React.FC = () => {
 
       if (response.ok) {
         Swal.fire({ title: "Success", text: data.detail || "Password reset successfully!", icon: "success" })
-          .then(() => router.push("/login"));
+          .then(() => router.push("/"));
       } else {
         Swal.fire({ title: "Failed", text: data.detail || "Invalid or expired token.", icon: "error" });
       }
